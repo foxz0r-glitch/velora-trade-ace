@@ -1,5 +1,5 @@
 import { brl } from "@/lib/format";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { TrendingDown, TrendingUp, History } from "lucide-react";
 
 export type TradeRecord = {
   id: string;
@@ -15,53 +15,77 @@ export type TradeRecord = {
 
 export function HistoryBar({ trades }: { trades: TradeRecord[] }) {
   return (
-    <footer className="h-24 shrink-0 bg-panel border-t border-border flex flex-col">
-      <div className="px-4 py-1.5 border-b border-border text-[11px] uppercase tracking-wider text-muted-foreground">
+    <footer className="h-28 shrink-0 bg-panel/95 backdrop-blur border-t border-border flex flex-col">
+      <div className="px-4 py-2 border-b border-border flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
+        <History className="w-3.5 h-3.5" />
         Histórico de operações
+        <span className="ml-auto text-muted-foreground/70 normal-case tracking-normal">
+          {trades.length} {trades.length === 1 ? "operação" : "operações"}
+        </span>
       </div>
-      <div className="flex-1 overflow-x-auto">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden">
         {trades.length === 0 ? (
           <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
-            Nenhuma operação ainda
+            Nenhuma operação ainda — abra sua primeira trade
           </div>
         ) : (
           <div className="flex h-full gap-2 px-3 py-2">
             {trades.map((t) => {
               const pending = !t.result;
-              const color =
+              const isCall = t.direction === "CALL";
+              const accent =
                 t.result === "WIN"
-                  ? "text-call border-call/40 bg-call/10"
+                  ? "border-call/50 bg-gradient-to-br from-call/15 to-call/5"
                   : t.result === "LOSS"
-                  ? "text-put border-put/40 bg-put/10"
+                  ? "border-put/50 bg-gradient-to-br from-put/15 to-put/5"
                   : t.result === "DRAW"
-                  ? "text-muted-foreground border-border bg-muted/40"
-                  : "text-foreground border-border bg-secondary";
+                  ? "border-border bg-muted/30"
+                  : "border-border/80 bg-secondary/40";
+              const resultText =
+                t.result === "WIN"
+                  ? "text-call"
+                  : t.result === "LOSS"
+                  ? "text-put"
+                  : "text-muted-foreground";
               return (
                 <div
                   key={t.id}
-                  className={`shrink-0 w-44 border rounded-md px-2.5 py-1.5 text-xs ${color}`}
+                  className={`shrink-0 w-48 border rounded-lg px-3 py-1.5 flex flex-col justify-between ${accent}`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold">{t.assetSymbol}</span>
-                    {t.direction === "CALL" ? (
-                      <ArrowUp className="w-3.5 h-3.5 text-call" />
-                    ) : (
-                      <ArrowDown className="w-3.5 h-3.5 text-put" />
-                    )}
-                  </div>
-                  <div className="mt-0.5 flex items-center justify-between">
-                    <span className="opacity-80">{brl(t.amount)}</span>
-                    <span className="font-bold">
-                      {pending ? "..." : t.result}
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div
+                        className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
+                          isCall ? "bg-call/20" : "bg-put/20"
+                        }`}
+                      >
+                        {isCall ? (
+                          <TrendingUp className="w-3 h-3 text-call" strokeWidth={3} />
+                        ) : (
+                          <TrendingDown className="w-3 h-3 text-put" strokeWidth={3} />
+                        )}
+                      </div>
+                      <span className="text-xs font-bold truncate">{t.assetSymbol}</span>
+                    </div>
+                    <span
+                      className={`text-[10px] font-black uppercase tracking-wider ${resultText}`}
+                    >
+                      {pending ? (
+                        <span className="text-muted-foreground animate-pulse">aberto</span>
+                      ) : (
+                        t.result
+                      )}
                     </span>
                   </div>
-                  {!pending && (
-                    <div className="text-[11px] opacity-80">
-                      {t.profit !== undefined
-                        ? `${t.profit >= 0 ? "+" : ""}${brl(t.profit)}`
-                        : ""}
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground tabular-nums">{brl(t.amount)}</span>
+                    {!pending && t.profit !== undefined && (
+                      <span className={`font-bold tabular-nums ${resultText}`}>
+                        {t.profit >= 0 ? "+" : ""}
+                        {brl(t.profit)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
