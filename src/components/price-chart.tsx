@@ -110,6 +110,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
   // Live price feed
   useEffect(() => {
     const socket = getSocket();
+    let lastRealTickAt = 0;
 
     const applyPrice = (price: number, ts?: number) => {
       if (!seriesRef.current) return;
@@ -127,6 +128,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
 
     const onUpdate = (msg: { symbol: string; price: number; timestamp?: number }) => {
       if (!msg || msg.symbol !== symbol) return;
+      lastRealTickAt = Date.now();
       applyPrice(msg.price, msg.timestamp);
     };
 
@@ -136,9 +138,9 @@ export function PriceChart({ symbol }: { symbol: string }) {
     socket.on("connect", subscribe);
     socket.on("price_update", onUpdate);
 
-    // Drift local como fallback — garante que o gráfico sempre se move
-    // mesmo se a subscrição do socket demorar ou cair
+    // Drift só ativa se não chegou tick real nos últimos 3s (fallback de conexão)
     const interval = setInterval(() => {
+      if (Date.now() - lastRealTickAt < 3000) return;
       const last = lastPriceRef.current;
       if (!last) return;
       applyPrice(last + (Math.random() - 0.5) * 0.0002 * last);
