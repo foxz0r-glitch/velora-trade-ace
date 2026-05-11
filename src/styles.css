@@ -113,3 +113,19 @@
   }
   input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 }
+
+/* Trade buttons — smooth, GPU-accelerated arrow rotation */
+.trade-btn {
+  transition-property: box-shadow, filter, transform;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+.trade-arrow {
+  transform: rotate(var(--arrow-rot, 0deg)) translateZ(0);
+  transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+.trade-arrow--up { --arrow-rot: 45deg; }
+.trade-arrow--down { --arrow-rot: -45deg; }
+.trade-btn:hover .trade-arrow { --arrow-rot: 0deg; }

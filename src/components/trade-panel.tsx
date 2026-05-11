@@ -208,14 +208,11 @@ export function TradePanel({
           disabled={!asset || submitting !== null}
           onClick={() => place("CALL")}
           style={{ backgroundColor: "#32AC41" }}
-          className="group relative w-full text-white font-black text-base py-3.5 rounded-lg overflow-hidden shadow-[0_4px_14px_rgba(50,172,65,0.25)] hover:shadow-[0_0_28px_rgba(50,172,65,0.65)] hover:brightness-110 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="trade-btn group relative w-full text-white font-black text-base py-3.5 rounded-lg overflow-hidden shadow-[0_4px_14px_rgba(50,172,65,0.25)] hover:shadow-[0_0_28px_rgba(50,172,65,0.65)] hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18),transparent_70%)]" />
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/25 group-hover:bg-black/40 transition-colors duration-300">
-            <ArrowUp
-              className="w-3.5 h-3.5 text-white/80 group-hover:text-white rotate-45 group-hover:rotate-0 transition-transform duration-500 ease-out will-change-transform [transform-origin:center] [backface-visibility:hidden]"
-              strokeWidth={3}
-            />
+          <span className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-out bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18),transparent_70%)]" />
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/25 group-hover:bg-black/40 transition-colors duration-500 ease-out">
+            <ArrowUp className="trade-arrow trade-arrow--up w-3.5 h-3.5 text-white" strokeWidth={3} />
           </span>
           <span className="relative block pl-12 pr-4 text-left">{submitting === "CALL" ? "ABRINDO..." : "COMPRAR"}</span>
         </button>
@@ -223,14 +220,11 @@ export function TradePanel({
           disabled={!asset || submitting !== null}
           onClick={() => place("PUT")}
           style={{ backgroundColor: "#F3382C" }}
-          className="group relative w-full text-white font-black text-base py-3.5 rounded-lg overflow-hidden shadow-[0_4px_14px_rgba(243,56,44,0.25)] hover:shadow-[0_0_28px_rgba(243,56,44,0.65)] hover:brightness-110 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="trade-btn group relative w-full text-white font-black text-base py-3.5 rounded-lg overflow-hidden shadow-[0_4px_14px_rgba(243,56,44,0.25)] hover:shadow-[0_0_28px_rgba(243,56,44,0.65)] hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18),transparent_70%)]" />
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/25 group-hover:bg-black/40 transition-colors duration-300">
-            <ArrowDown
-              className="w-3.5 h-3.5 text-white/80 group-hover:text-white -rotate-45 group-hover:rotate-0 transition-transform duration-500 ease-out will-change-transform [transform-origin:center] [backface-visibility:hidden]"
-              strokeWidth={3}
-            />
+          <span className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-out bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18),transparent_70%)]" />
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/25 group-hover:bg-black/40 transition-colors duration-500 ease-out">
+            <ArrowDown className="trade-arrow trade-arrow--down w-3.5 h-3.5 text-white" strokeWidth={3} />
           </span>
           <span className="relative block pl-12 pr-4 text-left">{submitting === "PUT" ? "ABRINDO..." : "VENDER"}</span>
         </button>
