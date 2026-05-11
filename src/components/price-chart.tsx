@@ -63,7 +63,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
     const base = 100 + Math.random() * 50;
     let p = base;
     const seed: Candle[] = [];
-    for (let i = 60; i >= 1; i--) {
+    for (let i = 300; i >= 1; i--) {
       const t = (now - i * CANDLE_SECONDS) as UTCTimestamp;
       const o = p;
       const c = o + (Math.random() - 0.5) * 0.6;
@@ -75,6 +75,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
     }
     series.setData(seed);
     lastPriceRef.current = p;
+    chart.timeScale().scrollToRealTime();
 
     return () => {
       chart.remove();
@@ -92,7 +93,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
     const base = 100 + Math.random() * 50;
     let p = base;
     const seed: Candle[] = [];
-    for (let i = 60; i >= 1; i--) {
+    for (let i = 300; i >= 1; i--) {
       const t = (now - i * CANDLE_SECONDS) as UTCTimestamp;
       const o = p;
       const c = o + (Math.random() - 0.5) * 0.6;
@@ -104,6 +105,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
     }
     seriesRef.current.setData(seed);
     lastPriceRef.current = p;
+    chartRef.current?.timeScale().scrollToRealTime();
   }, [symbol]);
 
   // Price updates via socket + simulated drift fallback
