@@ -78,8 +78,11 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
+              {mode === "register" && (
+                <p className="text-[11px] text-muted-foreground mt-1">Mín. 8 caracteres, 1 maiúscula e 1 número</p>
+              )}
             </div>
 
             {error && (
