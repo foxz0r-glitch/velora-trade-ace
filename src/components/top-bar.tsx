@@ -64,7 +64,10 @@ export function TopBar({ profile, isDemo, onToggleMode, onLogout }: TopBarProps)
         </div>
 
         {/* Top up CTA */}
-        <button className="hidden sm:flex items-center gap-1.5 bg-call hover:brightness-110 text-call-foreground font-bold text-sm px-4 py-2 rounded-lg shadow-lg shadow-call/30 transition">
+        <button
+          onClick={() => setDepositOpen(true)}
+          className="hidden sm:flex items-center gap-1.5 bg-call hover:brightness-110 text-call-foreground font-bold text-sm px-4 py-2 rounded-lg shadow-lg shadow-call/30 transition"
+        >
           <Plus className="w-4 h-4" strokeWidth={3} />
           Depositar
         </button>
