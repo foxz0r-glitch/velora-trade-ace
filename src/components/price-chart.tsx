@@ -140,12 +140,13 @@ export function PriceChart({ symbol }: { symbol: string }) {
       const t = Math.floor((ts ?? Date.now()) / 1000);
       const bucket = t - (t % tf);
       const existing = candlesRef.current.get(bucket);
-      const c: Candle = existing
-        // Candle existente: só atualiza close — high/low vêm exclusivamente do polling (CasaTrade real)
-        // Evita o "snap" causado por ticks incompletos expandindo high/low errado
-        ? { time: bucket as UTCTimestamp, open: existing.open, high: existing.high, low: existing.low, close: price }
-        // Novo candle: cria com os dados disponíveis, polling corrige OHLCV em até 1s
-        : { time: bucket as UTCTimestamp, open: lastPriceRef.current ?? price, high: price, low: price, close: price };
+      // Só atualiza candles que já existem (criados pelo polling com dados reais da CasaTrade)
+      // Nunca cria candle novo pelo socket — evita open errado e "pulo" de preço na abertura
+      if (!existing) {
+        lastPriceRef.current = price;
+        return;
+      }
+      const c: Candle = { time: bucket as UTCTimestamp, open: existing.open, high: existing.high, low: existing.low, close: price };
       candlesRef.current.set(bucket, c);
       seriesRef.current.update(c);
       lastPriceRef.current = price;
