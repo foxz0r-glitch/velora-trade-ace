@@ -38,34 +38,34 @@
 
 :root {
   --radius: 0.625rem;
-  /* PocketOption palette — slate with subtle blue-violet tint (hue ~265) */
-  --background: oklch(0.215 0.018 265);   /* #1c202e */
+  /* Custom palette — slate blue-violet, harmonized */
+  --background: #1C202E;
   --foreground: oklch(0.96 0.005 265);
-  --card: oklch(0.250 0.020 265);         /* #23283b */
+  --card: #23283B;
   --card-foreground: oklch(0.96 0.005 265);
-  --popover: oklch(0.255 0.020 265);
+  --popover: #1F2334;
   --popover-foreground: oklch(0.96 0.005 265);
-  --panel: oklch(0.235 0.019 265);        /* #1e2131 */
+  --panel: #1E2131;
   --panel-foreground: oklch(0.96 0.005 265);
-  --primary: oklch(0.70 0.18 148);
-  --primary-foreground: oklch(0.16 0.015 265);
-  --secondary: oklch(0.290 0.020 265);
+  --primary: #32AC41;
+  --primary-foreground: #0E1A11;
+  --secondary: #242839;
   --secondary-foreground: oklch(0.96 0.005 265);
-  --muted: oklch(0.270 0.018 265);
+  --muted: #222636;
   --muted-foreground: oklch(0.66 0.020 250);
-  --accent: oklch(0.325 0.022 265);
+  --accent: #2A3144;
   --accent-foreground: oklch(0.96 0.005 265);
-  --destructive: oklch(0.62 0.21 25);
-  --destructive-foreground: oklch(0.98 0.004 0);
-  --border: oklch(0.310 0.020 265);
-  --input: oklch(0.270 0.020 265);
-  --ring: oklch(0.70 0.18 148);
+  --destructive: #F3382C;
+  --destructive-foreground: #FFFFFF;
+  --border: #2A3144;
+  --input: #242839;
+  --ring: #32AC41;
 
-  /* CALL/PUT — matching PocketOption candle colors */
-  --call: oklch(0.70 0.18 148);   /* vivid green */
-  --call-foreground: oklch(0.14 0.02 148);
-  --put: oklch(0.64 0.21 25);     /* coral red */
-  --put-foreground: oklch(0.98 0.004 0);
+  /* CALL/PUT */
+  --call: #32AC41;
+  --call-foreground: #0E1A11;
+  --put: #F3382C;
+  --put-foreground: #FFFFFF;
 }
 
 .dark {

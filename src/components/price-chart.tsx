@@ -47,12 +47,12 @@ export function PriceChart({ symbol }: { symbol: string }) {
       crosshair: { mode: 1 },
     });
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#00C853",
-      downColor: "#F44336",
-      borderUpColor: "#00C853",
-      borderDownColor: "#F44336",
-      wickUpColor: "#00C853",
-      wickDownColor: "#F44336",
+      upColor: "#45B734",
+      downColor: "#FF3E1F",
+      borderUpColor: "#45B734",
+      borderDownColor: "#FF3E1F",
+      wickUpColor: "#45B734",
+      wickDownColor: "#FF3E1F",
     });
     chartRef.current = chart;
     seriesRef.current = series;
