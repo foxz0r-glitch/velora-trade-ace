@@ -156,8 +156,12 @@ export function PriceChart({ symbol }: { symbol: string }) {
 
   return (
     <div className="relative w-full h-full">
-      <div className="absolute top-3 left-3 z-10 px-3 py-1.5 rounded-md bg-card/80 border border-border backdrop-blur text-sm font-semibold">
-        {symbol}
+      <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card/70 border border-border backdrop-blur-md shadow-lg">
+        <span className="w-2 h-2 rounded-full bg-call animate-pulse" />
+        <span className="text-sm font-bold tracking-wide">{symbol}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-l border-border pl-2">
+          ao vivo
+        </span>
       </div>
       <div ref={containerRef} className="w-full h-full" />
     </div>
