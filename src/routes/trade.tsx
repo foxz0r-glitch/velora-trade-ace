@@ -119,29 +119,29 @@ function TradeRoom() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-[#0d1620]">
       <TopBar profile={profile} isDemo={isDemo} onToggleMode={toggleMode} onLogout={handleLogout} />
       <div className="flex-1 flex min-h-0">
-        {/* Left vertical nav rail (Quotex / PocketOption style) */}
-        <nav className="w-16 shrink-0 bg-panel/95 backdrop-blur border-r border-border flex flex-col items-stretch py-1 overflow-y-auto">
+        {/* Left vertical nav rail (PocketOption style) */}
+        <nav className="w-[68px] shrink-0 bg-[#0e1822] border-r border-border/60 flex flex-col items-stretch py-1 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 key={item.label}
-                className={`relative group flex flex-col items-center justify-center gap-1 py-3 text-[9px] font-semibold transition border-l-2 ${
+                className={`relative group flex flex-col items-center justify-center gap-1.5 py-3 text-[10px] font-medium transition ${
                   item.active
-                    ? "text-call border-call bg-gradient-to-r from-call/10 to-transparent"
-                    : "text-muted-foreground border-transparent hover:text-foreground hover:bg-accent/40"
+                    ? "text-call bg-call/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                 }`}
               >
-                <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
-                <span className="leading-none uppercase tracking-wider">{item.label}</span>
+                <Icon className="w-[22px] h-[22px]" strokeWidth={1.75} />
+                <span className="leading-none">{item.label}</span>
                 {item.badge && (
-                  <span className="absolute top-2 right-3 w-2 h-2 rounded-full bg-call ring-2 ring-panel" />
+                  <span className="absolute top-2 right-4 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-[#0e1822]" />
                 )}
                 {item.count && (
-                  <span className="absolute top-1.5 right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-put text-[9px] font-bold text-put-foreground flex items-center justify-center ring-2 ring-panel">
+                  <span className="absolute top-1.5 right-3 min-w-[16px] h-[16px] px-1 rounded-full bg-sky-500 text-[9px] font-bold text-white flex items-center justify-center ring-2 ring-[#0e1822]">
                     {item.count}
                   </span>
                 )}
@@ -150,17 +150,22 @@ function TradeRoom() {
           })}
         </nav>
 
-        <AssetSidebar selectedId={selected?.id ?? null} onSelect={setSelected} />
         <main className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 flex min-h-0">
+            {/* Chart area with mountain backdrop + overlaid asset selector */}
             <div
-              className="flex-1 relative bg-background overflow-hidden"
+              className="flex-1 relative overflow-hidden"
               style={{
-                backgroundImage: `linear-gradient(180deg, rgba(12,22,30,0.35) 0%, rgba(12,22,30,0.55) 60%, rgba(12,22,30,0.75) 100%), url(${chartBg})`,
+                backgroundImage: `linear-gradient(180deg, rgba(13,22,32,0.30) 0%, rgba(13,22,32,0.50) 55%, rgba(13,22,32,0.78) 100%), url(${chartBg})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
               }}
             >
+              {/* Asset selector floats over chart */}
+              <div className="absolute top-3 left-3 z-20">
+                <AssetSidebar selectedId={selected?.id ?? null} onSelect={setSelected} />
+              </div>
+
               {selected ? (
                 <>
                   <PriceChart symbol={selected.symbol} />
@@ -168,11 +173,32 @@ function TradeRoom() {
                 </>
               ) : (
                 <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                  Selecione um ativo na barra lateral para começar
+                  Selecione um ativo no canto superior esquerdo
                 </div>
               )}
             </div>
+
             <TradePanel asset={selected} isDemo={isDemo} onTradePlaced={handleTradePlaced} />
+
+            {/* Far-right decorative icon rail (PocketOption style) */}
+            <aside className="w-14 shrink-0 bg-[#0e1822] border-l border-border/60 flex flex-col items-center py-2 gap-1">
+              {[
+                { Icon: TrendingUp, label: "Trades" },
+                { Icon: Wallet, label: "Sinais" },
+                { Icon: UserCircle2, label: "Social" },
+                { Icon: Gem, label: "Express" },
+                { Icon: Trophy, label: "Pendentes" },
+                { Icon: HelpCircle, label: "Atalhos" },
+              ].map(({ Icon, label }) => (
+                <button
+                  key={label}
+                  className="w-full flex flex-col items-center gap-1 py-2.5 text-[9px] text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-md transition"
+                >
+                  <Icon className="w-4 h-4" strokeWidth={1.75} />
+                  <span className="leading-none">{label}</span>
+                </button>
+              ))}
+            </aside>
           </div>
           <HistoryBar trades={trades} />
         </main>

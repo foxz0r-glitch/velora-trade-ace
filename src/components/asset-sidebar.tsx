@@ -103,8 +103,7 @@ export function AssetSidebar({
   };
 
   return (
-    <aside className="shrink-0 bg-panel border-r border-border p-2">
-      <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative inline-block">
         {/* Trigger box */}
         <button
           onClick={() => setOpen((v) => !v)}
@@ -236,7 +235,6 @@ export function AssetSidebar({
             </div>
           </div>
         )}
-      </div>
-    </aside>
+    </div>
   );
 }
