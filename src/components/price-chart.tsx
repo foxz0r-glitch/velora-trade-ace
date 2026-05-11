@@ -125,20 +125,25 @@ export function PriceChart({ symbol }: { symbol: string }) {
   }, [symbol, timeframe]);
 
   // Polling das últimas 3 candles da CasaTrade a cada 1s
-  // Atualiza OHLCV e define o preço alvo para animação — não chama update() diretamente
+  // Só atualiza candlesRef para o candle ATUAL — candles fechados não são tocados
   useEffect(() => {
     const sync = async () => {
       if (!seriesRef.current) return;
       const data = await api.candles(symbol, timeframe, 3);
       if (!data.length) return;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const currentBucket = nowSec - (nowSec % timeframe);
       for (const d of data) {
-        candlesRef.current.set(d.time, {
-          time: d.time as UTCTimestamp,
-          open: d.open,
-          high: d.high,
-          low: d.low,
-          close: d.close,
-        });
+        // Ignora candles já fechados — preserva os valores finalizados na troca de bucket
+        if (d.time >= currentBucket) {
+          candlesRef.current.set(d.time, {
+            time: d.time as UTCTimestamp,
+            open: d.open,
+            high: d.high,
+            low: d.low,
+            close: d.close,
+          });
+        }
       }
       const last = data[data.length - 1];
       targetCloseRef.current = last.close;
@@ -169,9 +174,13 @@ export function PriceChart({ symbol }: { symbol: string }) {
         const bucket = nowSec - (nowSec % tf);
         const existing = candlesRef.current.get(bucket);
         if (existing) {
-          // Reset ao iniciar novo candle — aguarda polling criar o candle antes de resetar
-          // (evita gap: animClose do candle anterior != open do novo candle)
+          // Troca de bucket: finaliza candle anterior com dado real da CasaTrade
+          // O candle anterior ainda é o último bar → update() funciona antes de adicionar o novo
           if (bucket !== lastBucketRef.current) {
+            if (lastBucketRef.current !== -1) {
+              const prev = candlesRef.current.get(lastBucketRef.current);
+              if (prev) try { seriesRef.current.update(prev); } catch {}
+            }
             lastBucketRef.current = bucket;
             animCloseRef.current  = existing.open;
             animHighRef.current   = existing.open;
