@@ -1,6 +1,8 @@
 import { brl } from "@/lib/format";
 import { LogOut, Gift, ChevronDown, Plus } from "lucide-react";
+import { useState } from "react";
 import type { Profile } from "@/hooks/use-profile";
+import { DepositModal } from "@/components/deposit-modal";
 
 interface TopBarProps {
   profile: Profile | null;
@@ -12,6 +14,7 @@ interface TopBarProps {
 export function TopBar({ profile, isDemo, onToggleMode, onLogout }: TopBarProps) {
   const balance = isDemo ? (profile?.demoBalance ?? 0) : (profile?.balance ?? 0);
   const initial = (profile?.name || profile?.email || "U").charAt(0).toUpperCase();
+  const [depositOpen, setDepositOpen] = useState(false);
 
   return (
     <header className="h-16 shrink-0 bg-panel/80 backdrop-blur border-b border-border flex items-center px-4 gap-3">
@@ -61,7 +64,10 @@ export function TopBar({ profile, isDemo, onToggleMode, onLogout }: TopBarProps)
         </div>
 
         {/* Top up CTA */}
-        <button className="hidden sm:flex items-center gap-1.5 bg-call hover:brightness-110 text-call-foreground font-bold text-sm px-4 py-2 rounded-lg shadow-lg shadow-call/30 transition">
+        <button
+          onClick={() => setDepositOpen(true)}
+          className="hidden sm:flex items-center gap-1.5 bg-call hover:brightness-110 text-call-foreground font-bold text-sm px-4 py-2 rounded-lg shadow-lg shadow-call/30 transition"
+        >
           <Plus className="w-4 h-4" strokeWidth={3} />
           Depositar
         </button>
@@ -82,6 +88,7 @@ export function TopBar({ profile, isDemo, onToggleMode, onLogout }: TopBarProps)
           <LogOut className="w-4 h-4" />
         </button>
       </div>
+      <DepositModal open={depositOpen} onOpenChange={setDepositOpen} />
     </header>
   );
 }
