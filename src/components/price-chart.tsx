@@ -71,6 +71,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
       borderDownColor: "#FF3E1F",
       wickUpColor: "#45B734",
       wickDownColor: "#FF3E1F",
+      priceFormat: { type: "price", precision: 6, minMove: 0.000001 },
     });
     chartRef.current = chart;
     seriesRef.current = series;
@@ -146,7 +147,9 @@ export function PriceChart({ symbol }: { symbol: string }) {
         lastPriceRef.current = price;
         return;
       }
-      const c: Candle = { time: bucket as UTCTimestamp, open: existing.open, high: existing.high, low: existing.low, close: price };
+      // high/low só expandem (nunca encolhem pelo tick) — garante que o corpo nunca
+      // ultrapasse a sombra. Polling corrige o valor exato da CasaTrade a cada 1s.
+      const c: Candle = { time: bucket as UTCTimestamp, open: existing.open, high: Math.max(existing.high, price), low: Math.min(existing.low, price), close: price };
       candlesRef.current.set(bucket, c);
       seriesRef.current.update(c);
       lastPriceRef.current = price;
