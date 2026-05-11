@@ -118,9 +118,37 @@ function TradeRoom() {
   };
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col bg-background">
       <TopBar profile={profile} isDemo={isDemo} onToggleMode={toggleMode} onLogout={handleLogout} />
       <div className="flex-1 flex min-h-0">
+        {/* Left vertical nav rail (Quotex / PocketOption style) */}
+        <nav className="w-[68px] shrink-0 bg-panel border-r border-border flex flex-col items-stretch py-2 overflow-y-auto">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.label}
+                className={`relative group flex flex-col items-center justify-center gap-1 py-3 text-[10px] font-medium transition border-l-2 ${
+                  item.active
+                    ? "text-call border-call bg-accent/40"
+                    : "text-muted-foreground border-transparent hover:text-foreground hover:bg-accent/30"
+                }`}
+              >
+                <Icon className="w-5 h-5" strokeWidth={1.75} />
+                <span className="leading-none">{item.label}</span>
+                {item.badge && (
+                  <span className="absolute top-2 right-3 w-2 h-2 rounded-full bg-call ring-2 ring-panel" />
+                )}
+                {item.count && (
+                  <span className="absolute top-1.5 right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-call text-[9px] font-bold text-call-foreground flex items-center justify-center ring-2 ring-panel">
+                    {item.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
         <AssetSidebar selectedId={selected?.id ?? null} onSelect={setSelected} />
         <main className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 flex min-h-0">
