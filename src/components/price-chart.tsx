@@ -110,7 +110,6 @@ export function PriceChart({ symbol }: { symbol: string }) {
   // Live price feed
   useEffect(() => {
     const socket = getSocket();
-    socket.emit("subscribe:asset", symbol);
 
     const applyPrice = (price: number, ts?: number) => {
       if (!seriesRef.current) return;
@@ -131,11 +130,25 @@ export function PriceChart({ symbol }: { symbol: string }) {
       applyPrice(msg.price, msg.timestamp);
     };
 
+    // Subscreve ao room do ativo — re-subscreve a cada reconexão
+    const subscribe = () => socket.emit("subscribe:asset", symbol);
+    subscribe();
+    socket.on("connect", subscribe);
     socket.on("price_update", onUpdate);
 
+    // Drift local como fallback — garante que o gráfico sempre se move
+    // mesmo se a subscrição do socket demorar ou cair
+    const interval = setInterval(() => {
+      const last = lastPriceRef.current;
+      if (!last) return;
+      applyPrice(last + (Math.random() - 0.5) * 0.0002 * last);
+    }, 1000);
+
     return () => {
+      socket.off("connect", subscribe);
       socket.off("price_update", onUpdate);
       socket.emit("unsubscribe:asset", symbol);
+      clearInterval(interval);
     };
   }, [symbol]);
 
