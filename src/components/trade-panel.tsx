@@ -73,9 +73,9 @@ export function TradePanel({
   return (
     <aside className="w-64 shrink-0 bg-panel border-l border-border/60 flex flex-col">
       {isDemo && (
-        <div className="bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/20 border-b border-amber-500/40 px-4 py-2 flex items-center justify-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-          <span className="text-[11px] font-bold text-amber-300 uppercase tracking-[0.18em]">
+        <div className="bg-secondary border-b border-border px-4 py-2 flex items-center justify-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-call animate-pulse" />
+          <span className="text-[11px] font-bold text-foreground uppercase tracking-[0.18em]">
             Modo Demo · Saldo Virtual
           </span>
         </div>
@@ -207,7 +207,7 @@ export function TradePanel({
         <button
           disabled={!asset || submitting !== null}
           onClick={() => place("CALL")}
-          className="group w-full flex items-center justify-center gap-2 bg-gradient-to-b from-call to-emerald-700 text-call-foreground font-black text-base py-3.5 rounded-lg shadow-lg shadow-call/30 hover:shadow-call/50 hover:brightness-110 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="group w-full flex items-center justify-center gap-2 bg-call text-call-foreground font-black text-base py-3.5 rounded-lg shadow-lg shadow-call/30 hover:shadow-call/50 hover:brightness-110 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <TrendingUp className="w-5 h-5" strokeWidth={3} />
           {submitting === "CALL" ? "ABRINDO..." : "COMPRAR"}
@@ -215,7 +215,7 @@ export function TradePanel({
         <button
           disabled={!asset || submitting !== null}
           onClick={() => place("PUT")}
-          className="group w-full flex items-center justify-center gap-2 bg-gradient-to-b from-put to-red-700 text-put-foreground font-black text-base py-3.5 rounded-lg shadow-lg shadow-put/30 hover:shadow-put/50 hover:brightness-110 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="group w-full flex items-center justify-center gap-2 bg-put text-put-foreground font-black text-base py-3.5 rounded-lg shadow-lg shadow-put/30 hover:shadow-put/50 hover:brightness-110 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <TrendingDown className="w-5 h-5" strokeWidth={3} />
           {submitting === "PUT" ? "ABRINDO..." : "VENDER"}
