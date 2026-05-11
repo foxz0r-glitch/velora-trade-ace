@@ -110,6 +110,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
   // Live price feed
   useEffect(() => {
     const socket = getSocket();
+    socket.emit("subscribe:asset", symbol);
 
     const applyPrice = (price: number, ts?: number) => {
       if (!seriesRef.current) return;
@@ -132,17 +133,9 @@ export function PriceChart({ symbol }: { symbol: string }) {
 
     socket.on("price_update", onUpdate);
 
-    // Simulated drift fallback when no socket data
-    const interval = setInterval(() => {
-      const last = lastPriceRef.current;
-      if (!last) return;
-      const next = last + (Math.random() - 0.5) * 0.0002 * last;
-      applyPrice(next);
-    }, 1000);
-
     return () => {
       socket.off("price_update", onUpdate);
-      clearInterval(interval);
+      socket.emit("unsubscribe:asset", symbol);
     };
   }, [symbol]);
 
