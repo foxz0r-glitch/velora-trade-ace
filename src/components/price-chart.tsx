@@ -17,6 +17,19 @@ type Candle = {
   close: number;
 };
 
+function frozenKey(symbol: string, tf: number, bucket: number) {
+  return `vc:${symbol}:${tf}:${bucket}`;
+}
+function saveCandle(symbol: string, tf: number, candle: Candle) {
+  try { sessionStorage.setItem(frozenKey(symbol, tf, Number(candle.time)), JSON.stringify(candle)); } catch {}
+}
+function loadCandle(symbol: string, tf: number, bucket: number): Candle | null {
+  try {
+    const raw = sessionStorage.getItem(frozenKey(symbol, tf, bucket));
+    return raw ? (JSON.parse(raw) as Candle) : null;
+  } catch { return null; }
+}
+
 const TIMEFRAMES = [
   { label: "5s",   value: 5 },
   { label: "15s",  value: 15 },
@@ -105,13 +118,17 @@ export function PriceChart({ symbol }: { symbol: string }) {
 
     api.candles(symbol, timeframe).then((data) => {
       if (!seriesRef.current) return;
-      const candles: Candle[] = data.map((d) => ({
-        time: d.time as UTCTimestamp,
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close,
-      }));
+      const candles: Candle[] = data.map((d) => {
+        const frozen = loadCandle(symbol, timeframe, d.time);
+        if (frozen) return frozen;
+        return {
+          time: d.time as UTCTimestamp,
+          open: d.open,
+          high: d.high,
+          low: d.low,
+          close: d.close,
+        };
+      });
       if (candles.length > 0) {
         candles.forEach((c) => candlesRef.current.set(Number(c.time), c));
         seriesRef.current.setData(candles);
@@ -174,12 +191,26 @@ export function PriceChart({ symbol }: { symbol: string }) {
         const bucket = nowSec - (nowSec % tf);
         const existing = candlesRef.current.get(bucket);
         if (existing) {
-          // Troca de bucket: finaliza candle anterior com dado real da CasaTrade
-          // O candle anterior ainda é o último bar → update() funciona antes de adicionar o novo
+          // Troca de bucket: congela candle anterior com valores da animação (não da CasaTrade)
           if (bucket !== lastBucketRef.current) {
             if (lastBucketRef.current !== -1) {
               const prev = candlesRef.current.get(lastBucketRef.current);
-              if (prev) try { seriesRef.current.update(prev); } catch {}
+              if (
+                prev &&
+                animCloseRef.current !== null &&
+                animHighRef.current !== null &&
+                animLowRef.current !== null
+              ) {
+                const frozen: Candle = {
+                  time:  prev.time,
+                  open:  prev.open,
+                  high:  animHighRef.current,
+                  low:   animLowRef.current,
+                  close: animCloseRef.current,
+                };
+                saveCandle(symbol, tfRef.current, frozen);
+                try { seriesRef.current.update(frozen); } catch {}
+              }
             }
             lastBucketRef.current = bucket;
             animCloseRef.current  = existing.open;
