@@ -119,11 +119,11 @@ function TradeRoom() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-[#0d1620]">
+    <div className="h-screen flex flex-col bg-background">
       <TopBar profile={profile} isDemo={isDemo} onToggleMode={toggleMode} onLogout={handleLogout} />
       <div className="flex-1 flex min-h-0">
         {/* Left vertical nav rail (PocketOption style) */}
-        <nav className="w-[68px] shrink-0 bg-[#0e1822] border-r border-border/60 flex flex-col items-stretch py-1 overflow-y-auto">
+        <nav className="w-[68px] shrink-0 bg-panel border-r border-border/60 flex flex-col items-stretch py-1 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
@@ -138,10 +138,10 @@ function TradeRoom() {
                 <Icon className="w-[22px] h-[22px]" strokeWidth={1.75} />
                 <span className="leading-none">{item.label}</span>
                 {item.badge && (
-                  <span className="absolute top-2 right-4 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-[#0e1822]" />
+                  <span className="absolute top-2 right-4 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-panel" />
                 )}
                 {item.count && (
-                  <span className="absolute top-1.5 right-3 min-w-[16px] h-[16px] px-1 rounded-full bg-sky-500 text-[9px] font-bold text-white flex items-center justify-center ring-2 ring-[#0e1822]">
+                  <span className="absolute top-1.5 right-3 min-w-[16px] h-[16px] px-1 rounded-full bg-sky-500 text-[9px] font-bold text-white flex items-center justify-center ring-2 ring-panel">
                     {item.count}
                   </span>
                 )}
@@ -181,7 +181,7 @@ function TradeRoom() {
             <TradePanel asset={selected} isDemo={isDemo} onTradePlaced={handleTradePlaced} />
 
             {/* Far-right decorative icon rail (PocketOption style) */}
-            <aside className="w-14 shrink-0 bg-[#0e1822] border-l border-border/60 flex flex-col items-center py-2 gap-1">
+            <aside className="w-14 shrink-0 bg-panel border-l border-border/60 flex flex-col items-center py-2 gap-1">
               {[
                 { Icon: TrendingUp, label: "Trades" },
                 { Icon: Wallet, label: "Sinais" },
