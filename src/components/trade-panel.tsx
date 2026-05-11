@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TrendingUp, TrendingDown, Clock, DollarSign, Minus, Plus } from "lucide-react";
+import { Clock, DollarSign, Minus, Plus, ArrowUp, ArrowDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { brl } from "@/lib/format";
 import type { Asset } from "./asset-sidebar";
@@ -203,22 +203,30 @@ export function TradePanel({
       </div>
 
       {/* CTA buttons */}
-      <div className="p-4 pt-0 space-y-2">
+      <div className="p-4 pt-0 space-y-2.5">
         <button
           disabled={!asset || submitting !== null}
           onClick={() => place("CALL")}
-          className="group w-full flex items-center justify-center gap-2 bg-call text-call-foreground font-black text-base py-3.5 rounded-lg shadow-lg shadow-call/30 hover:shadow-call/50 hover:brightness-110 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ backgroundColor: "#32AC41" }}
+          className="group relative w-full flex items-center justify-center gap-2 text-white font-black text-base py-3.5 rounded-lg overflow-hidden shadow-[0_4px_14px_rgba(50,172,65,0.25)] hover:shadow-[0_0_28px_rgba(50,172,65,0.65)] hover:brightness-110 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <TrendingUp className="w-5 h-5" strokeWidth={3} />
-          {submitting === "CALL" ? "ABRINDO..." : "COMPRAR"}
+          <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18),transparent_70%)]" />
+          <span className="relative inline-flex items-center justify-center w-5 h-5 transition-transform duration-500 ease-out group-hover:-translate-y-1.5">
+            <ArrowUp className="w-5 h-5" strokeWidth={3} />
+          </span>
+          <span className="relative">{submitting === "CALL" ? "ABRINDO..." : "COMPRAR"}</span>
         </button>
         <button
           disabled={!asset || submitting !== null}
           onClick={() => place("PUT")}
-          className="group w-full flex items-center justify-center gap-2 bg-put text-put-foreground font-black text-base py-3.5 rounded-lg shadow-lg shadow-put/30 hover:shadow-put/50 hover:brightness-110 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ backgroundColor: "#F3382C" }}
+          className="group relative w-full flex items-center justify-center gap-2 text-white font-black text-base py-3.5 rounded-lg overflow-hidden shadow-[0_4px_14px_rgba(243,56,44,0.25)] hover:shadow-[0_0_28px_rgba(243,56,44,0.65)] hover:brightness-110 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <TrendingDown className="w-5 h-5" strokeWidth={3} />
-          {submitting === "PUT" ? "ABRINDO..." : "VENDER"}
+          <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18),transparent_70%)]" />
+          <span className="relative inline-flex items-center justify-center w-5 h-5 transition-transform duration-500 ease-out group-hover:translate-y-1.5">
+            <ArrowDown className="w-5 h-5" strokeWidth={3} />
+          </span>
+          <span className="relative">{submitting === "PUT" ? "ABRINDO..." : "VENDER"}</span>
         </button>
       </div>
     </aside>
