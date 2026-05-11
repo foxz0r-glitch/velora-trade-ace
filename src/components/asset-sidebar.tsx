@@ -214,8 +214,8 @@ export function AssetSidebar({
                         onClick={(e) => toggleFav(a.id, e)}
                         className={`w-4 h-4 shrink-0 transition ${
                           isFav
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "text-muted-foreground hover:text-yellow-400"
+                            ? "fill-call text-call"
+                            : "text-muted-foreground hover:text-call"
                         }`}
                       />
                       <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center shrink-0">
