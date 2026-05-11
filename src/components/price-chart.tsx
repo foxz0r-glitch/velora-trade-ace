@@ -114,12 +114,16 @@ export function PriceChart({ symbol }: { symbol: string }) {
       if (!seriesRef.current) return;
       const data = await api.candles(symbol, timeframe, 3);
       if (!data.length || !seriesRef.current) return;
+      // Atualiza ref para todas as candles recebidas
       for (const d of data) {
-        const c: Candle = { time: d.time as UTCTimestamp, open: d.open, high: d.high, low: d.low, close: d.close };
-        candlesRef.current.set(Number(c.time), c);
-        seriesRef.current.update(c);
+        candlesRef.current.set(d.time, { time: d.time as UTCTimestamp, open: d.open, high: d.high, low: d.low, close: d.close });
       }
-      lastPriceRef.current = data[data.length - 1].close;
+      // lightweight-charts: update() só aceita o último bar — lança exceção para timestamps anteriores
+      const last = data[data.length - 1];
+      try {
+        seriesRef.current.update({ time: last.time as UTCTimestamp, open: last.open, high: last.high, low: last.low, close: last.close });
+      } catch {}
+      lastPriceRef.current = last.close;
     };
     const interval = setInterval(sync, 2000);
     return () => clearInterval(interval);
