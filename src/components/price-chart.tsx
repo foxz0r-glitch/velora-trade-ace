@@ -165,7 +165,6 @@ export function PriceChart({ symbol }: { symbol: string }) {
   // Loop de animação + feed de preços em tempo real
   useEffect(() => {
     const socket = getSocket();
-    let lastRealTickAt = 0;
 
     // rAF: interpola o close em direção ao alvo a 60fps.
     // animHigh/animLow rastreados LOCALMENTE — corpo sempre alcança o wick antes de ele crescer.
@@ -235,7 +234,6 @@ export function PriceChart({ symbol }: { symbol: string }) {
       candles?: Record<number, ServerCandle>;
     }) => {
       if (!msg || msg.symbol !== symbol) return;
-      lastRealTickAt = Date.now();
       if (msg.candles) applyServerCandle(msg.candles);
       targetCloseRef.current = msg.price;
       lastPriceRef.current   = msg.price;
@@ -274,21 +272,12 @@ export function PriceChart({ symbol }: { symbol: string }) {
     socket.on("price_update",   onUpdate);
     socket.on("candle_snapshot", onSnapshot);
 
-    // Drift suave quando sem tick real por 3s
-    const driftInterval = setInterval(() => {
-      if (Date.now() - lastRealTickAt < 3000) return;
-      const last = lastPriceRef.current;
-      if (!last) return;
-      targetCloseRef.current = last + (Math.random() - 0.5) * 0.0002 * last;
-    }, 1000);
-
     return () => {
       cancelAnimationFrame(rafRef.current);
       socket.off("connect",        subscribe);
       socket.off("price_update",   onUpdate);
       socket.off("candle_snapshot", onSnapshot);
       socket.emit("unsubscribe:asset", symbol);
-      clearInterval(driftInterval);
     };
   }, [symbol]);
 
