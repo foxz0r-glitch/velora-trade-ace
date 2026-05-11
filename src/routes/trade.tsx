@@ -10,6 +10,29 @@ import { ResultModal, type ResultPopup } from "@/components/result-modal";
 import { useProfile } from "@/hooks/use-profile";
 import { clearToken, getToken } from "@/lib/api";
 import { disconnectSocket, getSocket } from "@/lib/socket";
+import {
+  TrendingUp,
+  Wallet,
+  UserCircle2,
+  ShoppingCart,
+  Gem,
+  Trophy,
+  MessageCircle,
+  HelpCircle,
+  MoreHorizontal,
+} from "lucide-react";
+
+const NAV_ITEMS = [
+  { icon: TrendingUp, label: "Trading", active: true },
+  { icon: Wallet, label: "Finance" },
+  { icon: UserCircle2, label: "Perfil" },
+  { icon: ShoppingCart, label: "Mercado" },
+  { icon: Gem, label: "Conquistas", badge: true },
+  { icon: Trophy, label: "Torneios" },
+  { icon: MessageCircle, label: "Chat", count: 5 },
+  { icon: HelpCircle, label: "Ajuda" },
+  { icon: MoreHorizontal, label: "Mais" },
+];
 
 export const Route = createFileRoute("/trade")({
   head: () => ({ meta: [{ title: "Trade Room · Velora Broker" }] }),
