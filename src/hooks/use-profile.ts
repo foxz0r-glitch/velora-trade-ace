@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, getToken } from "@/lib/api";
 
-export type Profile = { id: string; name: string; email: string; balance: number };
+export type Profile = { id: string; name: string; email: string; balance: number; demoBalance: number };
 
 export function useProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);

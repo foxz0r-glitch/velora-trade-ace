@@ -2,7 +2,16 @@ import { brl } from "@/lib/format";
 import { LogOut, Wallet, User } from "lucide-react";
 import type { Profile } from "@/hooks/use-profile";
 
-export function TopBar({ profile, onLogout }: { profile: Profile | null; onLogout: () => void }) {
+interface TopBarProps {
+  profile: Profile | null;
+  isDemo: boolean;
+  onToggleMode: () => void;
+  onLogout: () => void;
+}
+
+export function TopBar({ profile, isDemo, onToggleMode, onLogout }: TopBarProps) {
+  const balance = isDemo ? (profile?.demoBalance ?? 0) : (profile?.balance ?? 0);
+
   return (
     <header className="h-14 shrink-0 bg-panel border-b border-border flex items-center px-4 gap-4">
       <div className="flex items-center gap-2">
@@ -13,12 +22,44 @@ export function TopBar({ profile, onLogout }: { profile: Profile | null; onLogou
       </div>
 
       <div className="ml-auto flex items-center gap-3">
-        <div className="flex items-center gap-2 bg-secondary/60 border border-border rounded-md px-3 py-1.5">
-          <Wallet className="w-4 h-4 text-call" />
-          <div className="text-xs text-muted-foreground">Saldo</div>
-          <div className="text-sm font-bold text-call">{brl(profile?.balance ?? 0)}</div>
+        {/* Real / Demo toggle */}
+        <div className="flex items-center rounded-md border border-border overflow-hidden text-xs font-semibold">
+          <button
+            onClick={() => isDemo && onToggleMode()}
+            className={`px-3 py-1.5 transition ${
+              !isDemo
+                ? "bg-call text-call-foreground"
+                : "bg-secondary text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            Real
+          </button>
+          <button
+            onClick={() => !isDemo && onToggleMode()}
+            className={`px-3 py-1.5 transition ${
+              isDemo
+                ? "bg-amber-500 text-white"
+                : "bg-secondary text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            Demo
+          </button>
         </div>
 
+        {/* Balance */}
+        <div className={`flex items-center gap-2 border rounded-md px-3 py-1.5 ${
+          isDemo
+            ? "bg-amber-500/10 border-amber-500/40"
+            : "bg-secondary/60 border-border"
+        }`}>
+          <Wallet className={`w-4 h-4 ${isDemo ? "text-amber-500" : "text-call"}`} />
+          <div className="text-xs text-muted-foreground">{isDemo ? "Demo" : "Saldo"}</div>
+          <div className={`text-sm font-bold ${isDemo ? "text-amber-500" : "text-call"}`}>
+            {brl(balance)}
+          </div>
+        </div>
+
+        {/* User */}
         <div className="flex items-center gap-2 px-2">
           <div className="w-7 h-7 rounded-full bg-secondary border border-border flex items-center justify-center">
             <User className="w-4 h-4 text-muted-foreground" />

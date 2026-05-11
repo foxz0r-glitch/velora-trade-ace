@@ -13,15 +13,18 @@ const DURATIONS = [
 
 export function TradePanel({
   asset,
+  isDemo,
   onTradePlaced,
 }: {
   asset: Asset | null;
+  isDemo: boolean;
   onTradePlaced: (trade: { id: string; assetSymbol: string; direction: "CALL" | "PUT"; amount: number; duration: number; expiresAt: number }) => void;
 }) {
   const [amount, setAmount] = useState<number>(5);
   const [duration, setDuration] = useState<number>(60);
   const [submitting, setSubmitting] = useState<null | "CALL" | "PUT">(null);
   const [error, setError] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (error) {
@@ -44,6 +47,7 @@ export function TradePanel({
         direction,
         amount,
         duration,
+        isDemo,
       });
       onTradePlaced({
         id: res.id,
@@ -67,6 +71,12 @@ export function TradePanel({
 
   return (
     <aside className="w-72 shrink-0 bg-panel border-l border-border flex flex-col">
+      {isDemo && (
+        <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-1.5 flex items-center justify-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+          <span className="text-[11px] font-semibold text-amber-500 uppercase tracking-wider">Conta Demo</span>
+        </div>
+      )}
       <div className="p-4 border-b border-border">
         <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
           Operação

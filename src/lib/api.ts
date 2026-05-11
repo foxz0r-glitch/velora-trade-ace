@@ -49,12 +49,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  profile: () => apiFetch<{ id: string; name: string; email: string; balance: number }>("/api/users/me"),
+  profile: () => apiFetch<{ id: string; name: string; email: string; balance: number; demoBalance: number }>("/api/users/me"),
   assets: async () => {
     const data = await apiFetch<Array<{ id: string; name: string; symbol: string; payoutPercent: number }>>("/api/trading/assets");
     return data.map((a) => ({ ...a, payout: Number(a.payoutPercent) }));
   },
-  trade: (body: { assetId: string; direction: "CALL" | "PUT"; amount: number; duration: number }) =>
+  trade: (body: { assetId: string; direction: "CALL" | "PUT"; amount: number; duration: number; isDemo?: boolean }) =>
     apiFetch<{ id: string; openPrice: number; expiresAt: string }>("/api/trading/trade", {
       method: "POST",
       body: JSON.stringify(body),

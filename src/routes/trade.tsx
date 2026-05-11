@@ -22,6 +22,18 @@ function TradeRoom() {
   const [selected, setSelected] = useState<Asset | null>(null);
   const [trades, setTrades] = useState<TradeRecord[]>([]);
   const [popup, setPopup] = useState<ResultPopup | null>(null);
+  const [isDemo, setIsDemo] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("accountMode") === "demo";
+  });
+
+  const toggleMode = () => {
+    setIsDemo((prev) => {
+      const next = !prev;
+      localStorage.setItem("accountMode", next ? "demo" : "real");
+      return next;
+    });
+  };
 
   // Auth gate (client-side)
   useEffect(() => {
@@ -38,6 +50,7 @@ function TradeRoom() {
       result: "WIN" | "LOSS" | "DRAW";
       profit: number;
       closePrice?: number;
+      isDemo?: boolean;
     }) => {
       if (!msg) return;
       let symbol = "";
@@ -83,7 +96,7 @@ function TradeRoom() {
 
   return (
     <div className="h-screen flex flex-col">
-      <TopBar profile={profile} onLogout={handleLogout} />
+      <TopBar profile={profile} isDemo={isDemo} onToggleMode={toggleMode} onLogout={handleLogout} />
       <div className="flex-1 flex min-h-0">
         <AssetSidebar selectedId={selected?.id ?? null} onSelect={setSelected} />
         <main className="flex-1 flex flex-col min-w-0">
@@ -100,7 +113,7 @@ function TradeRoom() {
                 </div>
               )}
             </div>
-            <TradePanel asset={selected} onTradePlaced={handleTradePlaced} />
+            <TradePanel asset={selected} isDemo={isDemo} onTradePlaced={handleTradePlaced} />
           </div>
           <HistoryBar trades={trades} />
         </main>
