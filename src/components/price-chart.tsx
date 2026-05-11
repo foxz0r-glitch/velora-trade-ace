@@ -17,18 +17,7 @@ type Candle = {
   close: number;
 };
 
-function frozenKey(symbol: string, tf: number, bucket: number) {
-  return `vc:${symbol}:${tf}:${bucket}`;
-}
-function saveCandle(symbol: string, tf: number, candle: Candle) {
-  try { sessionStorage.setItem(frozenKey(symbol, tf, Number(candle.time)), JSON.stringify(candle)); } catch {}
-}
-function loadCandle(symbol: string, tf: number, bucket: number): Candle | null {
-  try {
-    const raw = sessionStorage.getItem(frozenKey(symbol, tf, bucket));
-    return raw ? (JSON.parse(raw) as Candle) : null;
-  } catch { return null; }
-}
+type LiveCandle = { time: number; open: number; high: number; low: number; close: number };
 
 const TIMEFRAMES = [
   { label: "5s",   value: 5 },
@@ -52,12 +41,8 @@ export function PriceChart({ symbol }: { symbol: string }) {
   const candlesRef = useRef<Map<number, Candle>>(new Map());
   const lastPriceRef = useRef<number | null>(null);
   const tfRef = useRef<number>(60);
-  // Preço alvo (último tick real ou polling) — animation interpola até ele
   const targetCloseRef = useRef<number | null>(null);
-  // Valores atualmente exibidos no gráfico (interpolados)
   const animCloseRef = useRef<number | null>(null);
-  const animHighRef  = useRef<number | null>(null);
-  const animLowRef   = useRef<number | null>(null);
   const lastBucketRef = useRef<number>(-1);
   const rafRef = useRef<number>(0);
   const [timeframe, setTimeframe] = useState(60);
@@ -109,8 +94,6 @@ export function PriceChart({ symbol }: { symbol: string }) {
     tfRef.current = timeframe;
     targetCloseRef.current = null;
     animCloseRef.current = null;
-    animHighRef.current = null;
-    animLowRef.current = null;
     lastBucketRef.current = -1;
     if (!seriesRef.current) return;
     candlesRef.current.clear();
@@ -118,17 +101,13 @@ export function PriceChart({ symbol }: { symbol: string }) {
 
     api.candles(symbol, timeframe).then((data) => {
       if (!seriesRef.current) return;
-      const candles: Candle[] = data.map((d) => {
-        const frozen = loadCandle(symbol, timeframe, d.time);
-        if (frozen) return frozen;
-        return {
-          time: d.time as UTCTimestamp,
-          open: d.open,
-          high: d.high,
-          low: d.low,
-          close: d.close,
-        };
-      });
+      const candles: Candle[] = data.map((d) => ({
+        time: d.time as UTCTimestamp,
+        open: d.open,
+        high: d.high,
+        low: d.low,
+        close: d.close,
+      }));
       if (candles.length > 0) {
         candles.forEach((c) => candlesRef.current.set(Number(c.time), c));
         seriesRef.current.setData(candles);
@@ -141,8 +120,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
     });
   }, [symbol, timeframe]);
 
-  // Polling das últimas 3 candles da CasaTrade a cada 1s
-  // Só atualiza candlesRef para o candle ATUAL — candles fechados não são tocados
+  // Polling de resiliência: mantém candlesRef atualizado se socket cair
   useEffect(() => {
     const sync = async () => {
       if (!seriesRef.current) return;
@@ -151,7 +129,6 @@ export function PriceChart({ symbol }: { symbol: string }) {
       const nowSec = Math.floor(Date.now() / 1000);
       const currentBucket = nowSec - (nowSec % timeframe);
       for (const d of data) {
-        // Ignora candles já fechados — preserva os valores finalizados na troca de bucket
         if (d.time >= currentBucket) {
           candlesRef.current.set(d.time, {
             time: d.time as UTCTimestamp,
@@ -162,11 +139,8 @@ export function PriceChart({ symbol }: { symbol: string }) {
           });
         }
       }
-      const last = data[data.length - 1];
-      targetCloseRef.current = last.close;
-      lastPriceRef.current = last.close;
     };
-    const interval = setInterval(sync, 1000);
+    const interval = setInterval(sync, 3000);
     return () => clearInterval(interval);
   }, [symbol, timeframe]);
 
@@ -175,8 +149,8 @@ export function PriceChart({ symbol }: { symbol: string }) {
     const socket = getSocket();
     let lastRealTickAt = 0;
 
-    // requestAnimationFrame: interpola o close quadro a quadro (60fps) em direção ao alvo
-    // Fator 0.05 → cobre ~95% da distância em 1s — movimento fluído como "barra de progresso"
+    // rAF: interpola o close quadro a quadro (60fps) em direção ao alvo
+    // open/high/low vêm do servidor — iguais para todos os clientes
     const loop = () => {
       const target = targetCloseRef.current;
       if (target !== null && seriesRef.current) {
@@ -191,45 +165,16 @@ export function PriceChart({ symbol }: { symbol: string }) {
         const bucket = nowSec - (nowSec % tf);
         const existing = candlesRef.current.get(bucket);
         if (existing) {
-          // Troca de bucket: congela candle anterior com valores da animação (não da CasaTrade)
           if (bucket !== lastBucketRef.current) {
-            if (lastBucketRef.current !== -1) {
-              const prev = candlesRef.current.get(lastBucketRef.current);
-              if (
-                prev &&
-                animCloseRef.current !== null &&
-                animHighRef.current !== null &&
-                animLowRef.current !== null
-              ) {
-                const frozen: Candle = {
-                  time:  prev.time,
-                  open:  prev.open,
-                  high:  animHighRef.current,
-                  low:   animLowRef.current,
-                  close: animCloseRef.current,
-                };
-                saveCandle(symbol, tfRef.current, frozen);
-                try { seriesRef.current.update(frozen); } catch {}
-              }
-            }
             lastBucketRef.current = bucket;
-            animCloseRef.current  = existing.open;
-            animHighRef.current   = existing.open;
-            animLowRef.current    = existing.open;
+            animCloseRef.current = existing.open;
           }
-          if (animHighRef.current === null) animHighRef.current = next;
-          if (animLowRef.current  === null) animLowRef.current  = next;
-
-          // Sombras só crescem onde o corpo animado já esteve — sem puxar pelo polling
-          animHighRef.current = Math.max(animHighRef.current, next);
-          animLowRef.current  = Math.min(animLowRef.current,  next);
-
           const c: Candle = {
             time:  bucket as UTCTimestamp,
             open:  existing.open,
-            high:  animHighRef.current,
-            low:   animLowRef.current,
-            close: next,
+            high:  existing.high,
+            low:   existing.low,
+            close: animCloseRef.current,
           };
           try { seriesRef.current.update(c); } catch {}
         }
@@ -238,31 +183,50 @@ export function PriceChart({ symbol }: { symbol: string }) {
     };
     rafRef.current = requestAnimationFrame(loop);
 
-    // Socket tick: só atualiza o preço alvo (animação cuida do resto)
-    const applyPrice = (price: number, ts?: number) => {
+    // Aplica candle do servidor no timeframe atual
+    const applyServerCandle = (candles: Record<number, LiveCandle>) => {
       const tf = tfRef.current;
-      const t = Math.floor((ts ?? Date.now()) / 1000);
-      const bucket = t - (t % tf);
-      // Só aceita ticks de candles já existentes (criados pelo polling com open correto)
-      if (!candlesRef.current.has(bucket)) {
-        lastPriceRef.current = price;
-        targetCloseRef.current = price;
-        return;
-      }
-      targetCloseRef.current = price;
-      lastPriceRef.current = price;
+      const candle = candles[tf];
+      if (!candle) return;
+      candlesRef.current.set(candle.time, {
+        time:  candle.time as UTCTimestamp,
+        open:  candle.open,
+        high:  candle.high,
+        low:   candle.low,
+        close: candle.close,
+      });
     };
 
-    const onUpdate = (msg: { symbol: string; price: number; timestamp?: number }) => {
+    const onUpdate = (msg: {
+      symbol: string;
+      price: number;
+      timestamp?: number;
+      candles?: Record<number, LiveCandle>;
+    }) => {
       if (!msg || msg.symbol !== symbol) return;
       lastRealTickAt = Date.now();
-      applyPrice(msg.price, msg.timestamp);
+      if (msg.candles) applyServerCandle(msg.candles);
+      targetCloseRef.current = msg.price;
+      lastPriceRef.current = msg.price;
+    };
+
+    const onSnapshot = (msg: { symbol: string; candles: Record<number, LiveCandle> }) => {
+      if (!msg || msg.symbol !== symbol) return;
+      applyServerCandle(msg.candles);
+      const tf = tfRef.current;
+      const candle = msg.candles[tf];
+      if (candle) {
+        targetCloseRef.current = candle.close;
+        lastPriceRef.current = candle.close;
+        if (animCloseRef.current === null) animCloseRef.current = candle.close;
+      }
     };
 
     const subscribe = () => socket.emit("subscribe:asset", symbol);
     subscribe();
     socket.on("connect", subscribe);
     socket.on("price_update", onUpdate);
+    socket.on("candle_snapshot", onSnapshot);
 
     // Drift: só ativa se sem tick real por 3s
     const driftInterval = setInterval(() => {
@@ -276,6 +240,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
       cancelAnimationFrame(rafRef.current);
       socket.off("connect", subscribe);
       socket.off("price_update", onUpdate);
+      socket.off("candle_snapshot", onSnapshot);
       socket.emit("unsubscribe:asset", symbol);
       clearInterval(driftInterval);
     };
