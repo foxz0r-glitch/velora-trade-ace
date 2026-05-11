@@ -41,8 +41,11 @@ export function PriceChart({ symbol }: { symbol: string }) {
   const tfRef = useRef<number>(60);
   // Preço alvo (último tick real ou polling) — animation interpola até ele
   const targetCloseRef = useRef<number | null>(null);
-  // Preço atualmente exibido no gráfico (interpolado)
+  // Valores atualmente exibidos no gráfico (interpolados)
   const animCloseRef = useRef<number | null>(null);
+  const animHighRef  = useRef<number | null>(null);
+  const animLowRef   = useRef<number | null>(null);
+  const lastBucketRef = useRef<number>(-1);
   const rafRef = useRef<number>(0);
   const [timeframe, setTimeframe] = useState(60);
 
@@ -93,6 +96,9 @@ export function PriceChart({ symbol }: { symbol: string }) {
     tfRef.current = timeframe;
     targetCloseRef.current = null;
     animCloseRef.current = null;
+    animHighRef.current = null;
+    animLowRef.current = null;
+    lastBucketRef.current = -1;
     if (!seriesRef.current) return;
     candlesRef.current.clear();
     lastPriceRef.current = null;
@@ -163,11 +169,27 @@ export function PriceChart({ symbol }: { symbol: string }) {
         const bucket = nowSec - (nowSec % tf);
         const existing = candlesRef.current.get(bucket);
         if (existing) {
+          // Reset das sombras ao iniciar novo candle
+          if (bucket !== lastBucketRef.current) {
+            lastBucketRef.current = bucket;
+            animHighRef.current = existing.open;
+            animLowRef.current  = existing.open;
+          }
+          if (animHighRef.current === null) animHighRef.current = next;
+          if (animLowRef.current  === null) animLowRef.current  = next;
+
+          // Alvo: máximo/mínimo entre o que a animação visitou e o que a CasaTrade reporta
+          const tH = Math.max(animHighRef.current, existing.high, next);
+          const tL = Math.min(animLowRef.current,  existing.low,  next);
+          // Lerp suave — sombras crescem gradualmente, nunca pulam
+          animHighRef.current = animHighRef.current + (tH - animHighRef.current) * 0.05;
+          animLowRef.current  = animLowRef.current  + (tL - animLowRef.current)  * 0.05;
+
           const c: Candle = {
-            time: bucket as UTCTimestamp,
-            open: existing.open,
-            high: Math.max(existing.high, next),
-            low: Math.min(existing.low, next),
+            time:  bucket as UTCTimestamp,
+            open:  existing.open,
+            high:  animHighRef.current,
+            low:   animLowRef.current,
             close: next,
           };
           try { seriesRef.current.update(c); } catch {}
