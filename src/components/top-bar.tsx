@@ -1,5 +1,5 @@
 import { brl } from "@/lib/format";
-import { LogOut, Wallet, User } from "lucide-react";
+import { LogOut, Gift, ChevronDown, Plus } from "lucide-react";
 import type { Profile } from "@/hooks/use-profile";
 
 interface TopBarProps {
@@ -11,70 +11,75 @@ interface TopBarProps {
 
 export function TopBar({ profile, isDemo, onToggleMode, onLogout }: TopBarProps) {
   const balance = isDemo ? (profile?.demoBalance ?? 0) : (profile?.balance ?? 0);
+  const initial = (profile?.name || profile?.email || "U").charAt(0).toUpperCase();
 
   return (
-    <header className="h-14 shrink-0 bg-panel border-b border-border flex items-center px-4 gap-4">
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-md bg-call/20 flex items-center justify-center">
-          <span className="text-call font-bold">V</span>
+    <header className="h-16 shrink-0 bg-panel/80 backdrop-blur border-b border-border flex items-center px-4 gap-3">
+      {/* Brand */}
+      <div className="flex items-center gap-2.5 pr-3">
+        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-call to-emerald-700 flex items-center justify-center shadow-lg shadow-call/20">
+          <span className="text-call-foreground font-black text-lg">V</span>
         </div>
-        <span className="font-bold tracking-tight">Velora Broker</span>
+        <div className="leading-tight">
+          <div className="font-bold tracking-tight text-sm">Velora</div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Broker</div>
+        </div>
       </div>
 
-      <div className="ml-auto flex items-center gap-3">
-        {/* Real / Demo toggle */}
-        <div className="flex items-center rounded-md border border-border overflow-hidden text-xs font-semibold">
+      <div className="ml-auto flex items-center gap-2">
+        {/* Bonus pill */}
+        <button className="hidden md:flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500/15 to-call/15 border border-sky-500/30 px-3 py-1.5 hover:brightness-110 transition">
+          <Gift className="w-4 h-4 text-sky-400" />
+          <div className="leading-tight text-left">
+            <div className="text-[10px] font-bold text-sky-300 uppercase tracking-wider">Bônus 50%</div>
+            <div className="text-[9px] text-muted-foreground">no primeiro depósito</div>
+          </div>
+        </button>
+
+        {/* Account selector — Real / Demo */}
+        <div className="flex items-stretch rounded-lg bg-secondary/70 border border-border overflow-hidden">
+          <div className="flex flex-col px-3 py-1 justify-center min-w-[140px]">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${isDemo ? "bg-amber-400" : "bg-call"} animate-pulse`}
+              />
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                {isDemo ? "Conta Demo" : "Conta Real"}
+              </span>
+            </div>
+            <div className={`text-base font-bold leading-tight ${isDemo ? "text-amber-400" : "text-call"}`}>
+              {brl(balance)}
+            </div>
+          </div>
           <button
-            onClick={() => isDemo && onToggleMode()}
-            className={`px-3 py-1.5 transition ${
-              !isDemo
-                ? "bg-call text-call-foreground"
-                : "bg-secondary text-muted-foreground hover:bg-accent"
-            }`}
+            onClick={onToggleMode}
+            title="Trocar conta"
+            className="px-2 border-l border-border hover:bg-accent transition flex items-center"
           >
-            Real
-          </button>
-          <button
-            onClick={() => !isDemo && onToggleMode()}
-            className={`px-3 py-1.5 transition ${
-              isDemo
-                ? "bg-amber-500 text-white"
-                : "bg-secondary text-muted-foreground hover:bg-accent"
-            }`}
-          >
-            Demo
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
 
-        {/* Balance */}
-        <div className={`flex items-center gap-2 border rounded-md px-3 py-1.5 ${
-          isDemo
-            ? "bg-amber-500/10 border-amber-500/40"
-            : "bg-secondary/60 border-border"
-        }`}>
-          <Wallet className={`w-4 h-4 ${isDemo ? "text-amber-500" : "text-call"}`} />
-          <div className="text-xs text-muted-foreground">{isDemo ? "Demo" : "Saldo"}</div>
-          <div className={`text-sm font-bold ${isDemo ? "text-amber-500" : "text-call"}`}>
-            {brl(balance)}
-          </div>
-        </div>
+        {/* Top up CTA */}
+        <button className="hidden sm:flex items-center gap-1.5 bg-call hover:brightness-110 text-call-foreground font-bold text-sm px-4 py-2 rounded-lg shadow-lg shadow-call/30 transition">
+          <Plus className="w-4 h-4" strokeWidth={3} />
+          Depositar
+        </button>
 
-        {/* User */}
-        <div className="flex items-center gap-2 px-2">
-          <div className="w-7 h-7 rounded-full bg-secondary border border-border flex items-center justify-center">
-            <User className="w-4 h-4 text-muted-foreground" />
+        {/* Avatar */}
+        <div className="relative ml-1">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 border border-border flex items-center justify-center text-sm font-bold text-white">
+            {initial}
           </div>
-          <span className="text-sm font-medium hidden sm:block">
-            {profile?.name || profile?.email || "—"}
-          </span>
+          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-call ring-2 ring-panel" />
         </div>
 
         <button
           onClick={onLogout}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border bg-secondary hover:bg-accent transition"
+          title="Sair"
+          className="ml-1 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition"
         >
-          <LogOut className="w-3.5 h-3.5" />
-          Sair
+          <LogOut className="w-4 h-4" />
         </button>
       </div>
     </header>

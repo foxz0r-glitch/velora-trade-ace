@@ -10,6 +10,7 @@ import { ResultModal, type ResultPopup } from "@/components/result-modal";
 import { useProfile } from "@/hooks/use-profile";
 import { clearToken, getToken } from "@/lib/api";
 import { disconnectSocket, getSocket } from "@/lib/socket";
+import chartBg from "@/assets/chart-bg.jpg";
 import {
   TrendingUp,
   Wallet,
@@ -122,25 +123,25 @@ function TradeRoom() {
       <TopBar profile={profile} isDemo={isDemo} onToggleMode={toggleMode} onLogout={handleLogout} />
       <div className="flex-1 flex min-h-0">
         {/* Left vertical nav rail (Quotex / PocketOption style) */}
-        <nav className="w-[68px] shrink-0 bg-panel border-r border-border flex flex-col items-stretch py-2 overflow-y-auto">
+        <nav className="w-16 shrink-0 bg-panel/95 backdrop-blur border-r border-border flex flex-col items-stretch py-1 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 key={item.label}
-                className={`relative group flex flex-col items-center justify-center gap-1 py-3 text-[10px] font-medium transition border-l-2 ${
+                className={`relative group flex flex-col items-center justify-center gap-1 py-3 text-[9px] font-semibold transition border-l-2 ${
                   item.active
-                    ? "text-call border-call bg-accent/40"
-                    : "text-muted-foreground border-transparent hover:text-foreground hover:bg-accent/30"
+                    ? "text-call border-call bg-gradient-to-r from-call/10 to-transparent"
+                    : "text-muted-foreground border-transparent hover:text-foreground hover:bg-accent/40"
                 }`}
               >
-                <Icon className="w-5 h-5" strokeWidth={1.75} />
-                <span className="leading-none">{item.label}</span>
+                <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
+                <span className="leading-none uppercase tracking-wider">{item.label}</span>
                 {item.badge && (
                   <span className="absolute top-2 right-3 w-2 h-2 rounded-full bg-call ring-2 ring-panel" />
                 )}
                 {item.count && (
-                  <span className="absolute top-1.5 right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-call text-[9px] font-bold text-call-foreground flex items-center justify-center ring-2 ring-panel">
+                  <span className="absolute top-1.5 right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-put text-[9px] font-bold text-put-foreground flex items-center justify-center ring-2 ring-panel">
                     {item.count}
                   </span>
                 )}
@@ -152,7 +153,14 @@ function TradeRoom() {
         <AssetSidebar selectedId={selected?.id ?? null} onSelect={setSelected} />
         <main className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 flex min-h-0">
-            <div className="flex-1 relative bg-background">
+            <div
+              className="flex-1 relative bg-background overflow-hidden"
+              style={{
+                backgroundImage: `linear-gradient(180deg, rgba(15,20,32,0.55) 0%, rgba(15,20,32,0.85) 100%), url(${chartBg})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
               {selected ? (
                 <>
                   <PriceChart symbol={selected.symbol} />
