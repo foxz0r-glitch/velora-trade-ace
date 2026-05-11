@@ -156,7 +156,7 @@ function TradeRoom() {
             <div
               className="flex-1 relative bg-background overflow-hidden"
               style={{
-                backgroundImage: `linear-gradient(180deg, rgba(15,20,32,0.55) 0%, rgba(15,20,32,0.85) 100%), url(${chartBg})`,
+                backgroundImage: `linear-gradient(180deg, rgba(12,22,30,0.35) 0%, rgba(12,22,30,0.55) 60%, rgba(12,22,30,0.75) 100%), url(${chartBg})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
               }}
