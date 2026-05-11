@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { api, setToken } from "@/lib/api";
+import { api, setToken, setRefreshToken } from "@/lib/api";
 import { COUNTRIES, getCountry } from "@/lib/countries";
 import { TrendingUp } from "lucide-react";
 
@@ -58,6 +58,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             });
       if (!res.accessToken) throw new Error("Token não recebido");
       setToken(res.accessToken);
+      if (res.refreshToken) setRefreshToken(res.refreshToken);
       navigate({ to: "/trade" });
     } catch (err: any) {
       setError(err.message || "Erro");

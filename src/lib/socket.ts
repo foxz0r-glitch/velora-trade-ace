@@ -11,7 +11,8 @@ export function getSocket(): Socket {
   }
   socket = io(API_BASE, {
     transports: ["websocket"],
-    auth: { token: getToken() },
+    // Função chamada a cada (re)conexão — usa sempre o token atual
+    auth: (cb: (data: object) => void) => cb({ token: getToken() }),
     autoConnect: true,
   });
   return socket;

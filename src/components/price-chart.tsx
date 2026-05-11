@@ -107,6 +107,24 @@ export function PriceChart({ symbol }: { symbol: string }) {
     });
   }, [symbol, timeframe]);
 
+  // Polling das últimas 3 candles da CasaTrade a cada 2s — mantém chart idêntico
+  // independente dos ticks do socket (que podem perder flutuações internas)
+  useEffect(() => {
+    const sync = async () => {
+      if (!seriesRef.current) return;
+      const data = await api.candles(symbol, timeframe, 3);
+      if (!data.length || !seriesRef.current) return;
+      for (const d of data) {
+        const c: Candle = { time: d.time as UTCTimestamp, open: d.open, high: d.high, low: d.low, close: d.close };
+        candlesRef.current.set(Number(c.time), c);
+        seriesRef.current.update(c);
+      }
+      lastPriceRef.current = data[data.length - 1].close;
+    };
+    const interval = setInterval(sync, 2000);
+    return () => clearInterval(interval);
+  }, [symbol, timeframe]);
+
   // Live price feed
   useEffect(() => {
     const socket = getSocket();
