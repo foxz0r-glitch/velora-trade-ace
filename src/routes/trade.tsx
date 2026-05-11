@@ -153,7 +153,14 @@ function TradeRoom() {
         <AssetSidebar selectedId={selected?.id ?? null} onSelect={setSelected} />
         <main className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 flex min-h-0">
-            <div className="flex-1 relative bg-background">
+            <div
+              className="flex-1 relative bg-background overflow-hidden"
+              style={{
+                backgroundImage: `linear-gradient(180deg, rgba(15,20,32,0.55) 0%, rgba(15,20,32,0.85) 100%), url(${chartBg})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
               {selected ? (
                 <>
                   <PriceChart symbol={selected.symbol} />
