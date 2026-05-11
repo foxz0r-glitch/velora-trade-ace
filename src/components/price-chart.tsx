@@ -178,12 +178,9 @@ export function PriceChart({ symbol }: { symbol: string }) {
           if (animHighRef.current === null) animHighRef.current = next;
           if (animLowRef.current  === null) animLowRef.current  = next;
 
-          // Alvo: máximo/mínimo entre o que a animação visitou e o que a CasaTrade reporta
-          const tH = Math.max(animHighRef.current, existing.high, next);
-          const tL = Math.min(animLowRef.current,  existing.low,  next);
-          // Lerp suave — sombras crescem gradualmente, nunca pulam
-          animHighRef.current = animHighRef.current + (tH - animHighRef.current) * 0.05;
-          animLowRef.current  = animLowRef.current  + (tL - animLowRef.current)  * 0.05;
+          // Sombras só crescem onde o corpo animado já esteve — sem puxar pelo polling
+          animHighRef.current = Math.max(animHighRef.current, next);
+          animLowRef.current  = Math.min(animLowRef.current,  next);
 
           const c: Candle = {
             time:  bucket as UTCTimestamp,
