@@ -132,16 +132,16 @@ function TradeRoom() {
                 className={`relative group flex flex-col items-center justify-center gap-1.5 py-3 text-[10px] font-medium transition ${
                   item.active
                     ? "text-call bg-call/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
                 }`}
               >
                 <Icon className="w-[22px] h-[22px]" strokeWidth={1.75} />
                 <span className="leading-none">{item.label}</span>
                 {item.badge && (
-                  <span className="absolute top-2 right-4 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-panel" />
+                  <span className="absolute top-2 right-4 w-2 h-2 rounded-full bg-call ring-2 ring-panel" />
                 )}
                 {item.count && (
-                  <span className="absolute top-1.5 right-3 min-w-[16px] h-[16px] px-1 rounded-full bg-sky-500 text-[9px] font-bold text-white flex items-center justify-center ring-2 ring-panel">
+                  <span className="absolute top-1.5 right-3 min-w-[16px] h-[16px] px-1 rounded-full bg-accent text-[9px] font-bold text-foreground flex items-center justify-center ring-2 ring-panel">
                     {item.count}
                   </span>
                 )}
@@ -156,7 +156,7 @@ function TradeRoom() {
             <div
               className="flex-1 relative overflow-hidden"
               style={{
-                backgroundImage: `linear-gradient(180deg, rgba(13,22,32,0.30) 0%, rgba(13,22,32,0.50) 55%, rgba(13,22,32,0.78) 100%), url(${chartBg})`,
+                backgroundImage: `linear-gradient(180deg, rgba(28,32,46,0.38) 0%, rgba(31,35,52,0.56) 55%, rgba(28,32,46,0.86) 100%), url(${chartBg})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
               }}
@@ -192,7 +192,7 @@ function TradeRoom() {
               ].map(({ Icon, label }) => (
                 <button
                   key={label}
-                  className="w-full flex flex-col items-center gap-1 py-2.5 text-[9px] text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-md transition"
+                  className="w-full flex flex-col items-center gap-1 py-2.5 text-[9px] text-muted-foreground hover:text-foreground hover:bg-accent/40 rounded-md transition"
                 >
                   <Icon className="w-4 h-4" strokeWidth={1.75} />
                   <span className="leading-none">{label}</span>
