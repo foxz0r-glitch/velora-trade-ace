@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createChart,
   CandlestickSeries,
@@ -7,6 +7,7 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 import { getSocket } from "@/lib/socket";
+import { api } from "@/lib/api";
 
 type Candle = {
   time: UTCTimestamp;
@@ -16,7 +17,20 @@ type Candle = {
   close: number;
 };
 
-const CANDLE_SECONDS = 5;
+const TIMEFRAMES = [
+  { label: "5s",   value: 5 },
+  { label: "15s",  value: 15 },
+  { label: "30s",  value: 30 },
+  { label: "1m",   value: 60 },
+  { label: "2m",   value: 120 },
+  { label: "5m",   value: 300 },
+  { label: "10m",  value: 600 },
+  { label: "15m",  value: 900 },
+  { label: "30m",  value: 1800 },
+  { label: "1h",   value: 3600 },
+  { label: "2h",   value: 7200 },
+  { label: "4h",   value: 14400 },
+];
 
 export function PriceChart({ symbol }: { symbol: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -24,8 +38,10 @@ export function PriceChart({ symbol }: { symbol: string }) {
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const candlesRef = useRef<Map<number, Candle>>(new Map());
   const lastPriceRef = useRef<number | null>(null);
+  const tfRef = useRef<number>(60);
+  const [timeframe, setTimeframe] = useState(60);
 
-  // Chart setup
+  // Chart setup — runs once
   useEffect(() => {
     if (!containerRef.current) return;
     const chart = createChart(containerRef.current, {
@@ -43,6 +59,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
         timeVisible: true,
         secondsVisible: true,
         borderColor: "#2A3144",
+        rightOffset: 5,
       },
       rightPriceScale: { borderColor: "#2A3144" },
       crosshair: { mode: 1 },
@@ -57,26 +74,6 @@ export function PriceChart({ symbol }: { symbol: string }) {
     });
     chartRef.current = chart;
     seriesRef.current = series;
-
-    // seed with synthetic candles based on a baseline so the chart is visible immediately
-    const now = Math.floor(Date.now() / 1000);
-    const base = 100 + Math.random() * 50;
-    let p = base;
-    const seed: Candle[] = [];
-    for (let i = 300; i >= 1; i--) {
-      const t = (now - i * CANDLE_SECONDS) as UTCTimestamp;
-      const o = p;
-      const c = o + (Math.random() - 0.5) * 0.6;
-      const h = Math.max(o, c) + Math.random() * 0.3;
-      const l = Math.min(o, c) - Math.random() * 0.3;
-      seed.push({ time: t, open: o, high: h, low: l, close: c });
-      candlesRef.current.set(Number(t), seed[seed.length - 1]);
-      p = c;
-    }
-    series.setData(seed);
-    lastPriceRef.current = p;
-    chart.timeScale().scrollToRealTime();
-
     return () => {
       chart.remove();
       chartRef.current = null;
@@ -85,69 +82,61 @@ export function PriceChart({ symbol }: { symbol: string }) {
     };
   }, []);
 
-  // Reset on symbol change (re-seed)
+  // Load historical candles when symbol or timeframe changes
   useEffect(() => {
+    tfRef.current = timeframe;
     if (!seriesRef.current) return;
     candlesRef.current.clear();
-    const now = Math.floor(Date.now() / 1000);
-    const base = 100 + Math.random() * 50;
-    let p = base;
-    const seed: Candle[] = [];
-    for (let i = 300; i >= 1; i--) {
-      const t = (now - i * CANDLE_SECONDS) as UTCTimestamp;
-      const o = p;
-      const c = o + (Math.random() - 0.5) * 0.6;
-      const h = Math.max(o, c) + Math.random() * 0.3;
-      const l = Math.min(o, c) - Math.random() * 0.3;
-      seed.push({ time: t, open: o, high: h, low: l, close: c });
-      candlesRef.current.set(Number(t), seed[seed.length - 1]);
-      p = c;
-    }
-    seriesRef.current.setData(seed);
-    lastPriceRef.current = p;
-    chartRef.current?.timeScale().scrollToRealTime();
-  }, [symbol]);
+    lastPriceRef.current = null;
 
-  // Price updates via socket + simulated drift fallback
+    api.candles(symbol, timeframe).then((data) => {
+      if (!seriesRef.current) return;
+      const candles: Candle[] = data.map((d) => ({
+        time: d.time as UTCTimestamp,
+        open: d.open,
+        high: d.high,
+        low: d.low,
+        close: d.close,
+      }));
+      if (candles.length > 0) {
+        candles.forEach((c) => candlesRef.current.set(Number(c.time), c));
+        seriesRef.current.setData(candles);
+        lastPriceRef.current = candles[candles.length - 1].close;
+        chartRef.current?.timeScale().scrollToRealTime();
+      }
+    });
+  }, [symbol, timeframe]);
+
+  // Live price feed
   useEffect(() => {
     const socket = getSocket();
+
+    const applyPrice = (price: number, ts?: number) => {
+      if (!seriesRef.current) return;
+      const tf = tfRef.current;
+      const t = Math.floor((ts ?? Date.now()) / 1000);
+      const bucket = t - (t % tf);
+      const existing = candlesRef.current.get(bucket);
+      const c: Candle = existing
+        ? { time: bucket as UTCTimestamp, open: existing.open, high: Math.max(existing.high, price), low: Math.min(existing.low, price), close: price }
+        : { time: bucket as UTCTimestamp, open: lastPriceRef.current ?? price, high: price, low: price, close: price };
+      candlesRef.current.set(bucket, c);
+      seriesRef.current.update(c);
+      lastPriceRef.current = price;
+    };
 
     const onUpdate = (msg: { symbol: string; price: number; timestamp?: number }) => {
       if (!msg || msg.symbol !== symbol) return;
       applyPrice(msg.price, msg.timestamp);
     };
 
-    const applyPrice = (price: number, ts?: number) => {
-      if (!seriesRef.current) return;
-      const t = Math.floor((ts ?? Date.now()) / 1000);
-      const bucket = t - (t % CANDLE_SECONDS);
-      const existing = candlesRef.current.get(bucket);
-      const c: Candle = existing
-        ? {
-            time: bucket as UTCTimestamp,
-            open: existing.open,
-            high: Math.max(existing.high, price),
-            low: Math.min(existing.low, price),
-            close: price,
-          }
-        : {
-            time: bucket as UTCTimestamp,
-            open: lastPriceRef.current ?? price,
-            high: price,
-            low: price,
-            close: price,
-          };
-      candlesRef.current.set(bucket, c);
-      seriesRef.current.update(c);
-      lastPriceRef.current = price;
-    };
-
     socket.on("price_update", onUpdate);
 
-    // fallback simulated drift if socket has no data
+    // Simulated drift fallback when no socket data
     const interval = setInterval(() => {
-      const last = lastPriceRef.current ?? 100;
-      const next = last + (Math.random() - 0.5) * 0.4;
+      const last = lastPriceRef.current;
+      if (!last) return;
+      const next = last + (Math.random() - 0.5) * 0.0002 * last;
       applyPrice(next);
     }, 1000);
 
@@ -159,6 +148,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
 
   return (
     <div className="relative w-full h-full">
+      {/* Symbol badge */}
       <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card/70 border border-border backdrop-blur-md shadow-lg">
         <span className="w-2 h-2 rounded-full bg-call animate-pulse" />
         <span className="text-sm font-bold tracking-wide">{symbol}</span>
@@ -166,6 +156,24 @@ export function PriceChart({ symbol }: { symbol: string }) {
           ao vivo
         </span>
       </div>
+
+      {/* Timeframe selector */}
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-0.5 bg-card/70 border border-border rounded-lg backdrop-blur-md shadow-lg px-1.5 py-1">
+        {TIMEFRAMES.map((tf) => (
+          <button
+            key={tf.value}
+            onClick={() => setTimeframe(tf.value)}
+            className={`text-[11px] font-semibold px-2 py-1 rounded transition ${
+              timeframe === tf.value
+                ? "bg-call text-call-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+            }`}
+          >
+            {tf.label}
+          </button>
+        ))}
+      </div>
+
       <div ref={containerRef} className="w-full h-full" />
     </div>
   );

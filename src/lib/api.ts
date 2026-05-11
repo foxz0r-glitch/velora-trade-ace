@@ -60,4 +60,8 @@ export const api = {
       body: JSON.stringify(body),
     }),
   history: () => apiFetch<Array<any>>("/api/users/me/trades").catch(() => []),
+  candles: (symbol: string, resolution: number) =>
+    apiFetch<Array<{ time: number; open: number; high: number; low: number; close: number }>>(
+      `/api/trading/candles?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}`
+    ).catch(() => []),
 };
