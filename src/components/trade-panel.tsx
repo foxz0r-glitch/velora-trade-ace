@@ -71,7 +71,7 @@ export function TradePanel({
   const profit = amount * (payout / 100);
 
   return (
-    <aside className="w-80 shrink-0 bg-panel/95 backdrop-blur border-l border-border flex flex-col">
+    <aside className="w-64 shrink-0 bg-[#0e1822] border-l border-border/60 flex flex-col">
       {isDemo && (
         <div className="bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/20 border-b border-amber-500/40 px-4 py-2 flex items-center justify-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
