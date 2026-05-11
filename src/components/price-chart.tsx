@@ -169,11 +169,13 @@ export function PriceChart({ symbol }: { symbol: string }) {
         const bucket = nowSec - (nowSec % tf);
         const existing = candlesRef.current.get(bucket);
         if (existing) {
-          // Reset das sombras ao iniciar novo candle
+          // Reset ao iniciar novo candle — aguarda polling criar o candle antes de resetar
+          // (evita gap: animClose do candle anterior != open do novo candle)
           if (bucket !== lastBucketRef.current) {
             lastBucketRef.current = bucket;
-            animHighRef.current = existing.open;
-            animLowRef.current  = existing.open;
+            animCloseRef.current  = existing.open;
+            animHighRef.current   = existing.open;
+            animLowRef.current    = existing.open;
           }
           if (animHighRef.current === null) animHighRef.current = next;
           if (animLowRef.current  === null) animLowRef.current  = next;
