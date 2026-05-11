@@ -228,11 +228,11 @@ export function TradePanel({
           <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18),transparent_70%)]" />
           <span className="absolute left-4 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/25 group-hover:bg-black/40 transition-colors duration-300">
             <ArrowDown
-              className="w-3.5 h-3.5 text-white/75 group-hover:text-white -rotate-45 group-hover:rotate-0 transition-all duration-500 ease-out"
+              className="w-3.5 h-3.5 text-white/80 group-hover:text-white -rotate-45 group-hover:rotate-0 transition-transform duration-500 ease-out will-change-transform [transform-origin:center] [backface-visibility:hidden]"
               strokeWidth={3}
             />
           </span>
-          <span className="relative block text-center">{submitting === "PUT" ? "ABRINDO..." : "VENDER"}</span>
+          <span className="relative block pl-12 pr-4 text-left">{submitting === "PUT" ? "ABRINDO..." : "VENDER"}</span>
         </button>
       </div>
     </aside>
