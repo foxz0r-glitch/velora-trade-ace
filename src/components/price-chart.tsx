@@ -39,6 +39,11 @@ export function PriceChart({ symbol }: { symbol: string }) {
   const candlesRef = useRef<Map<number, Candle>>(new Map());
   const lastPriceRef = useRef<number | null>(null);
   const tfRef = useRef<number>(60);
+  // Preço alvo (último tick real ou polling) — animation interpola até ele
+  const targetCloseRef = useRef<number | null>(null);
+  // Preço atualmente exibido no gráfico (interpolado)
+  const animCloseRef = useRef<number | null>(null);
+  const rafRef = useRef<number>(0);
   const [timeframe, setTimeframe] = useState(60);
 
   // Chart setup — runs once
@@ -86,6 +91,8 @@ export function PriceChart({ symbol }: { symbol: string }) {
   // Load historical candles when symbol or timeframe changes
   useEffect(() => {
     tfRef.current = timeframe;
+    targetCloseRef.current = null;
+    animCloseRef.current = null;
     if (!seriesRef.current) return;
     candlesRef.current.clear();
     lastPriceRef.current = null;
@@ -102,56 +109,86 @@ export function PriceChart({ symbol }: { symbol: string }) {
       if (candles.length > 0) {
         candles.forEach((c) => candlesRef.current.set(Number(c.time), c));
         seriesRef.current.setData(candles);
-        lastPriceRef.current = candles[candles.length - 1].close;
+        const last = candles[candles.length - 1].close;
+        lastPriceRef.current = last;
+        targetCloseRef.current = last;
+        animCloseRef.current = last;
         chartRef.current?.timeScale().scrollToRealTime();
       }
     });
   }, [symbol, timeframe]);
 
-  // Polling das últimas 3 candles da CasaTrade a cada 2s — mantém chart idêntico
-  // independente dos ticks do socket (que podem perder flutuações internas)
+  // Polling das últimas 3 candles da CasaTrade a cada 1s
+  // Atualiza OHLCV e define o preço alvo para animação — não chama update() diretamente
   useEffect(() => {
     const sync = async () => {
       if (!seriesRef.current) return;
       const data = await api.candles(symbol, timeframe, 3);
-      if (!data.length || !seriesRef.current) return;
-      // Atualiza ref para todas as candles recebidas
+      if (!data.length) return;
       for (const d of data) {
-        candlesRef.current.set(d.time, { time: d.time as UTCTimestamp, open: d.open, high: d.high, low: d.low, close: d.close });
+        candlesRef.current.set(d.time, {
+          time: d.time as UTCTimestamp,
+          open: d.open,
+          high: d.high,
+          low: d.low,
+          close: d.close,
+        });
       }
-      // lightweight-charts: update() só aceita o último bar — lança exceção para timestamps anteriores
       const last = data[data.length - 1];
-      try {
-        seriesRef.current.update({ time: last.time as UTCTimestamp, open: last.open, high: last.high, low: last.low, close: last.close });
-      } catch {}
+      targetCloseRef.current = last.close;
       lastPriceRef.current = last.close;
     };
     const interval = setInterval(sync, 1000);
     return () => clearInterval(interval);
   }, [symbol, timeframe]);
 
-  // Live price feed
+  // Loop de animação + feed de preços em tempo real
   useEffect(() => {
     const socket = getSocket();
     let lastRealTickAt = 0;
 
+    // requestAnimationFrame: interpola o close quadro a quadro (60fps) em direção ao alvo
+    // Fator 0.05 → cobre ~95% da distância em 1s — movimento fluído como "barra de progresso"
+    const loop = () => {
+      const target = targetCloseRef.current;
+      if (target !== null && seriesRef.current) {
+        if (animCloseRef.current === null) animCloseRef.current = target;
+        const cur = animCloseRef.current;
+        const diff = target - cur;
+        const next = Math.abs(diff) < 0.0000001 ? target : cur + diff * 0.05;
+        animCloseRef.current = next;
+
+        const tf = tfRef.current;
+        const nowSec = Math.floor(Date.now() / 1000);
+        const bucket = nowSec - (nowSec % tf);
+        const existing = candlesRef.current.get(bucket);
+        if (existing) {
+          const c: Candle = {
+            time: bucket as UTCTimestamp,
+            open: existing.open,
+            high: Math.max(existing.high, next),
+            low: Math.min(existing.low, next),
+            close: next,
+          };
+          try { seriesRef.current.update(c); } catch {}
+        }
+      }
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+
+    // Socket tick: só atualiza o preço alvo (animação cuida do resto)
     const applyPrice = (price: number, ts?: number) => {
-      if (!seriesRef.current) return;
       const tf = tfRef.current;
       const t = Math.floor((ts ?? Date.now()) / 1000);
       const bucket = t - (t % tf);
-      const existing = candlesRef.current.get(bucket);
-      // Só atualiza candles que já existem (criados pelo polling com dados reais da CasaTrade)
-      // Nunca cria candle novo pelo socket — evita open errado e "pulo" de preço na abertura
-      if (!existing) {
+      // Só aceita ticks de candles já existentes (criados pelo polling com open correto)
+      if (!candlesRef.current.has(bucket)) {
         lastPriceRef.current = price;
+        targetCloseRef.current = price;
         return;
       }
-      // high/low só expandem (nunca encolhem pelo tick) — garante que o corpo nunca
-      // ultrapasse a sombra. Polling corrige o valor exato da CasaTrade a cada 1s.
-      const c: Candle = { time: bucket as UTCTimestamp, open: existing.open, high: Math.max(existing.high, price), low: Math.min(existing.low, price), close: price };
-      candlesRef.current.set(bucket, c);
-      seriesRef.current.update(c);
+      targetCloseRef.current = price;
       lastPriceRef.current = price;
     };
 
@@ -161,25 +198,25 @@ export function PriceChart({ symbol }: { symbol: string }) {
       applyPrice(msg.price, msg.timestamp);
     };
 
-    // Subscreve ao room do ativo — re-subscreve a cada reconexão
     const subscribe = () => socket.emit("subscribe:asset", symbol);
     subscribe();
     socket.on("connect", subscribe);
     socket.on("price_update", onUpdate);
 
-    // Drift só ativa se não chegou tick real nos últimos 3s (fallback de conexão)
-    const interval = setInterval(() => {
+    // Drift: só ativa se sem tick real por 3s
+    const driftInterval = setInterval(() => {
       if (Date.now() - lastRealTickAt < 3000) return;
       const last = lastPriceRef.current;
       if (!last) return;
-      applyPrice(last + (Math.random() - 0.5) * 0.0002 * last);
+      targetCloseRef.current = last + (Math.random() - 0.5) * 0.0002 * last;
     }, 1000);
 
     return () => {
+      cancelAnimationFrame(rafRef.current);
       socket.off("connect", subscribe);
       socket.off("price_update", onUpdate);
       socket.emit("unsubscribe:asset", symbol);
-      clearInterval(interval);
+      clearInterval(driftInterval);
     };
   }, [symbol]);
 
