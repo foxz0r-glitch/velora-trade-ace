@@ -10,6 +10,7 @@ import { ResultModal, type ResultPopup } from "@/components/result-modal";
 import { useProfile } from "@/hooks/use-profile";
 import { clearToken, getToken } from "@/lib/api";
 import { disconnectSocket, getSocket } from "@/lib/socket";
+import chartBg from "@/assets/chart-bg.jpg";
 import {
   TrendingUp,
   Wallet,
