@@ -235,7 +235,6 @@ export function AssetSidebar({
             </div>
           </div>
         )}
-      </div>
-    </aside>
+    </div>
   );
 }
