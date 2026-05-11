@@ -1,37 +1,14 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { api, setToken } from "@/lib/api";
+import { COUNTRIES, getCountry } from "@/lib/countries";
 import { TrendingUp } from "lucide-react";
 
-const COUNTRIES = [
-  { code: "BR", name: "Brasil" },
-  { code: "AR", name: "Argentina" },
-  { code: "CL", name: "Chile" },
-  { code: "CO", name: "Colômbia" },
-  { code: "MX", name: "México" },
-  { code: "PE", name: "Peru" },
-  { code: "UY", name: "Uruguai" },
-  { code: "PY", name: "Paraguai" },
-  { code: "BO", name: "Bolívia" },
-  { code: "EC", name: "Equador" },
-  { code: "VE", name: "Venezuela" },
-  { code: "US", name: "Estados Unidos" },
-  { code: "PT", name: "Portugal" },
-  { code: "ES", name: "Espanha" },
-  { code: "GB", name: "Reino Unido" },
-  { code: "DE", name: "Alemanha" },
-  { code: "FR", name: "França" },
-  { code: "IT", name: "Itália" },
-  { code: "CA", name: "Canadá" },
-  { code: "AU", name: "Austrália" },
-  { code: "JP", name: "Japão" },
-  { code: "CN", name: "China" },
-  { code: "IN", name: "Índia" },
-  { code: "ZA", name: "África do Sul" },
-  { code: "NG", name: "Nigéria" },
-  { code: "AO", name: "Angola" },
-  { code: "MZ", name: "Moçambique" },
-  { code: "OTHER", name: "Outro" },
+const CURRENCIES = [
+  { code: "USD", label: "USD — Dólar Americano" },
+  { code: "EUR", label: "EUR — Euro" },
+  { code: "GBP", label: "GBP — Libra Esterlina" },
+  { code: "BRL", label: "BRL — Real Brasileiro" },
 ];
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
@@ -41,9 +18,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [name, setName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [country, setCountry] = useState("BR");
+  const [countryCode, setCountryCode] = useState("BR");
+  const [currency, setCurrency] = useState("USD");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const currentCountry = getCountry(countryCode);
 
   useEffect(() => {
     if (mode !== "register") return;
@@ -52,7 +32,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       .then((data) => {
         if (data?.country_code) {
           const found = COUNTRIES.find((c) => c.code === data.country_code);
-          setCountry(found ? found.code : "OTHER");
+          if (found) setCountryCode(found.code);
         }
       })
       .catch(() => {});
@@ -63,10 +43,19 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     setError(null);
     setLoading(true);
     try {
+      const fullPhone = phone ? `${currentCountry.ddi} ${phone}` : undefined;
       const res =
         mode === "login"
           ? await api.login(email, password)
-          : await api.register({ email, password, name, lastName, phone, country });
+          : await api.register({
+              email,
+              password,
+              name,
+              lastName,
+              phone: fullPhone,
+              country: countryCode,
+              currency,
+            });
       if (!res.accessToken) throw new Error("Token não recebido");
       setToken(res.accessToken);
       navigate({ to: "/trade" });
@@ -78,7 +67,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-2 justify-center mb-8">
           <div className="w-10 h-10 rounded-lg bg-call/20 flex items-center justify-center">
@@ -98,6 +87,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           <form onSubmit={submit} className="space-y-4">
             {mode === "register" && (
               <>
+                {/* Nome + Sobrenome */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Nome</label>
@@ -119,12 +109,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                   </div>
                 </div>
 
+                {/* País */}
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">País de residência</label>
                   <select
                     className="mt-1 w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
                     required
                   >
                     {COUNTRIES.map((c) => (
@@ -135,20 +126,43 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                   </select>
                 </div>
 
+                {/* Telefone com DDI */}
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Telefone / WhatsApp</label>
-                  <input
-                    type="tel"
-                    placeholder="+55 11 99999-9999"
+                  <div className="mt-1 flex items-stretch">
+                    <span className="inline-flex items-center px-3 bg-secondary border border-r-0 border-border rounded-l-md text-sm font-medium text-muted-foreground shrink-0">
+                      {currentCountry.ddi}
+                    </span>
+                    <input
+                      type="tel"
+                      className="flex-1 bg-input border border-border rounded-r-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      placeholder={currentCountry.phonePlaceholder}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Moeda */}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Moeda da conta</label>
+                  <select
                     className="mt-1 w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                  />
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                  >
+                    {CURRENCIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </>
             )}
 
+            {/* E-mail */}
             <div>
               <label className="text-xs font-medium text-muted-foreground">E-mail</label>
               <input
@@ -160,6 +174,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               />
             </div>
 
+            {/* Senha */}
             <div>
               <label className="text-xs font-medium text-muted-foreground">Senha</label>
               <input
@@ -188,6 +203,19 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             >
               {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
             </button>
+
+            {/* Disclaimer legal */}
+            {mode === "register" && (
+              <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+                Ao criar uma conta, você aceita nossos{" "}
+                <Link to="/terms" className="underline hover:text-foreground">Termos e Condições</Link>,
+                {" "}a{" "}
+                <Link to="/privacy" className="underline hover:text-foreground">Política de Privacidade</Link>
+                {" "}e a{" "}
+                <Link to="/execution" className="underline hover:text-foreground">Política de Execução de Ordens</Link>
+                {" "}e confirma que você tem 18 anos de idade ou mais.
+              </p>
+            )}
           </form>
 
           <p className="text-sm text-muted-foreground mt-4 text-center">
