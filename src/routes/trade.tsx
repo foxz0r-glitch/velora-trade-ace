@@ -1,0 +1,111 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { TopBar } from "@/components/top-bar";
+import { AssetSidebar, type Asset } from "@/components/asset-sidebar";
+import { PriceChart } from "@/components/price-chart";
+import { TradePanel } from "@/components/trade-panel";
+import { HistoryBar, type TradeRecord } from "@/components/history-bar";
+import { ActiveTradesOverlay } from "@/components/active-trades-overlay";
+import { ResultModal, type ResultPopup } from "@/components/result-modal";
+import { useProfile } from "@/hooks/use-profile";
+import { clearToken, getToken } from "@/lib/api";
+import { disconnectSocket, getSocket } from "@/lib/socket";
+
+export const Route = createFileRoute("/trade")({
+  head: () => ({ meta: [{ title: "Trade Room · Velora Broker" }] }),
+  component: TradeRoom,
+});
+
+function TradeRoom() {
+  const navigate = useNavigate();
+  const { profile, refresh } = useProfile();
+  const [selected, setSelected] = useState<Asset | null>(null);
+  const [trades, setTrades] = useState<TradeRecord[]>([]);
+  const [popup, setPopup] = useState<ResultPopup | null>(null);
+
+  // Auth gate (client-side)
+  useEffect(() => {
+    if (typeof window !== "undefined" && !getToken()) {
+      navigate({ to: "/login" });
+    }
+  }, [navigate]);
+
+  // Socket: trade results
+  useEffect(() => {
+    const socket = getSocket();
+    const onResult = (msg: {
+      tradeId: string;
+      result: "WIN" | "LOSS" | "DRAW";
+      profit: number;
+      closePrice?: number;
+    }) => {
+      if (!msg) return;
+      let symbol = "";
+      setTrades((prev) =>
+        prev.map((t) => {
+          if (t.id === msg.tradeId) {
+            symbol = t.assetSymbol;
+            return { ...t, result: msg.result, profit: msg.profit, closePrice: msg.closePrice };
+          }
+          return t;
+        })
+      );
+      setPopup({ result: msg.result, profit: msg.profit, symbol });
+      refresh();
+    };
+    socket.on("trade_result", onResult);
+    return () => {
+      socket.off("trade_result", onResult);
+    };
+  }, [refresh]);
+
+  useEffect(() => {
+    return () => disconnectSocket();
+  }, []);
+
+  const handleTradePlaced = (trade: {
+    id: string;
+    assetSymbol: string;
+    direction: "CALL" | "PUT";
+    amount: number;
+    duration: number;
+    expiresAt: number;
+  }) => {
+    setTrades((prev) => [{ ...trade }, ...prev].slice(0, 30));
+    refresh();
+  };
+
+  const handleLogout = () => {
+    clearToken();
+    disconnectSocket();
+    navigate({ to: "/login" });
+  };
+
+  return (
+    <div className="h-screen flex flex-col">
+      <TopBar profile={profile} onLogout={handleLogout} />
+      <div className="flex-1 flex min-h-0">
+        <AssetSidebar selectedId={selected?.id ?? null} onSelect={setSelected} />
+        <main className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex min-h-0">
+            <div className="flex-1 relative bg-background">
+              {selected ? (
+                <>
+                  <PriceChart symbol={selected.symbol} />
+                  <ActiveTradesOverlay trades={trades} />
+                </>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                  Selecione um ativo na barra lateral para começar
+                </div>
+              )}
+            </div>
+            <TradePanel asset={selected} onTradePlaced={handleTradePlaced} />
+          </div>
+          <HistoryBar trades={trades} />
+        </main>
+      </div>
+      <ResultModal popup={popup} onClose={() => setPopup(null)} />
+    </div>
+  );
+}
