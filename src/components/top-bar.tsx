@@ -88,6 +88,7 @@ export function TopBar({ profile, isDemo, onToggleMode, onLogout }: TopBarProps)
           <LogOut className="w-4 h-4" />
         </button>
       </div>
+      <DepositModal open={depositOpen} onOpenChange={setDepositOpen} />
     </header>
   );
 }
