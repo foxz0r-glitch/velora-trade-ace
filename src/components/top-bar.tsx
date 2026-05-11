@@ -14,6 +14,7 @@ interface TopBarProps {
 export function TopBar({ profile, isDemo, onToggleMode, onLogout }: TopBarProps) {
   const balance = isDemo ? (profile?.demoBalance ?? 0) : (profile?.balance ?? 0);
   const initial = (profile?.name || profile?.email || "U").charAt(0).toUpperCase();
+  const [depositOpen, setDepositOpen] = useState(false);
 
   return (
     <header className="h-16 shrink-0 bg-panel/80 backdrop-blur border-b border-border flex items-center px-4 gap-3">
