@@ -38,33 +38,33 @@
 
 :root {
   --radius: 0.625rem;
-  /* Refined deep slate palette — neutral, premium, harmonious */
-  --background: oklch(0.165 0.012 250);
-  --foreground: oklch(0.97 0.004 250);
-  --card: oklch(0.205 0.014 250);
-  --card-foreground: oklch(0.97 0.004 250);
-  --popover: oklch(0.215 0.015 250);
-  --popover-foreground: oklch(0.97 0.004 250);
-  --panel: oklch(0.190 0.013 250);
-  --panel-foreground: oklch(0.97 0.004 250);
-  --primary: oklch(0.78 0.16 158);
-  --primary-foreground: oklch(0.15 0.015 250);
-  --secondary: oklch(0.245 0.015 250);
-  --secondary-foreground: oklch(0.97 0.004 250);
-  --muted: oklch(0.225 0.013 250);
-  --muted-foreground: oklch(0.68 0.015 250);
-  --accent: oklch(0.285 0.018 250);
-  --accent-foreground: oklch(0.97 0.004 250);
-  --destructive: oklch(0.63 0.22 25);
+  /* PocketOption-inspired slate-blue palette */
+  --background: oklch(0.225 0.012 240);
+  --foreground: oklch(0.96 0.004 240);
+  --card: oklch(0.260 0.014 240);
+  --card-foreground: oklch(0.96 0.004 240);
+  --popover: oklch(0.265 0.015 240);
+  --popover-foreground: oklch(0.96 0.004 240);
+  --panel: oklch(0.245 0.013 240);
+  --panel-foreground: oklch(0.96 0.004 240);
+  --primary: oklch(0.72 0.17 152);
+  --primary-foreground: oklch(0.16 0.015 240);
+  --secondary: oklch(0.295 0.014 240);
+  --secondary-foreground: oklch(0.96 0.004 240);
+  --muted: oklch(0.275 0.012 240);
+  --muted-foreground: oklch(0.66 0.012 240);
+  --accent: oklch(0.330 0.018 240);
+  --accent-foreground: oklch(0.96 0.004 240);
+  --destructive: oklch(0.62 0.21 25);
   --destructive-foreground: oklch(0.98 0.004 0);
-  --border: oklch(0.275 0.016 250);
-  --input: oklch(0.225 0.014 250);
-  --ring: oklch(0.78 0.16 158);
+  --border: oklch(0.320 0.016 240);
+  --input: oklch(0.275 0.014 240);
+  --ring: oklch(0.72 0.17 152);
 
-  /* CALL = green, PUT = red — vibrant but balanced */
-  --call: oklch(0.76 0.17 155);
-  --call-foreground: oklch(0.14 0.02 155);
-  --put: oklch(0.65 0.22 25);
+  /* CALL = vibrant green, PUT = coral red (matches PocketOption) */
+  --call: oklch(0.72 0.18 152);
+  --call-foreground: oklch(0.14 0.02 152);
+  --put: oklch(0.64 0.21 25);
   --put-foreground: oklch(0.98 0.004 0);
 }
 
