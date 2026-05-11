@@ -211,8 +211,11 @@ export function TradePanel({
           className="group relative w-full flex items-center justify-center gap-2 text-white font-black text-base py-3.5 rounded-lg overflow-hidden shadow-[0_4px_14px_rgba(50,172,65,0.25)] hover:shadow-[0_0_28px_rgba(50,172,65,0.65)] hover:brightness-110 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18),transparent_70%)]" />
-          <span className="relative inline-flex items-center justify-center w-5 h-5 transition-transform duration-500 ease-out group-hover:-translate-y-1.5">
-            <ArrowUp className="w-5 h-5" strokeWidth={3} />
+          <span className="relative inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/25 group-hover:bg-black/40 transition-colors duration-300">
+            <ArrowUp
+              className="w-3.5 h-3.5 text-white/75 group-hover:text-white rotate-45 group-hover:rotate-0 transition-all duration-500 ease-out"
+              strokeWidth={3}
+            />
           </span>
           <span className="relative">{submitting === "CALL" ? "ABRINDO..." : "COMPRAR"}</span>
         </button>
@@ -223,8 +226,11 @@ export function TradePanel({
           className="group relative w-full flex items-center justify-center gap-2 text-white font-black text-base py-3.5 rounded-lg overflow-hidden shadow-[0_4px_14px_rgba(243,56,44,0.25)] hover:shadow-[0_0_28px_rgba(243,56,44,0.65)] hover:brightness-110 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18),transparent_70%)]" />
-          <span className="relative inline-flex items-center justify-center w-5 h-5 transition-transform duration-500 ease-out group-hover:translate-y-1.5">
-            <ArrowDown className="w-5 h-5" strokeWidth={3} />
+          <span className="relative inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/25 group-hover:bg-black/40 transition-colors duration-300">
+            <ArrowDown
+              className="w-3.5 h-3.5 text-white/75 group-hover:text-white -rotate-45 group-hover:rotate-0 transition-all duration-500 ease-out"
+              strokeWidth={3}
+            />
           </span>
           <span className="relative">{submitting === "PUT" ? "ABRINDO..." : "VENDER"}</span>
         </button>
