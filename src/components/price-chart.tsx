@@ -32,18 +32,18 @@ export function PriceChart({ symbol }: { symbol: string }) {
       autoSize: true,
       layout: {
         background: { color: "transparent" },
-        textColor: "#9ca3af",
+        textColor: "#2A3144",
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.04)" },
-        horzLines: { color: "rgba(255,255,255,0.04)" },
+        vertLines: { color: "#23283B" },
+        horzLines: { color: "#23283B" },
       },
       timeScale: {
         timeVisible: true,
         secondsVisible: true,
-        borderColor: "rgba(255,255,255,0.08)",
+        borderColor: "#2A3144",
       },
-      rightPriceScale: { borderColor: "rgba(255,255,255,0.08)" },
+      rightPriceScale: { borderColor: "#2A3144" },
       crosshair: { mode: 1 },
     });
     const series = chart.addSeries(CandlestickSeries, {
