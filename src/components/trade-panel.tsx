@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TrendingUp, TrendingDown, Clock, DollarSign, Minus, Plus } from "lucide-react";
+import { Clock, DollarSign, Minus, Plus, ArrowUp, ArrowDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { brl } from "@/lib/format";
 import type { Asset } from "./asset-sidebar";
