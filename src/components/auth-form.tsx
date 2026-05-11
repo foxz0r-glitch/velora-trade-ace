@@ -1,15 +1,62 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, setToken } from "@/lib/api";
 import { TrendingUp } from "lucide-react";
+
+const COUNTRIES = [
+  { code: "BR", name: "Brasil" },
+  { code: "AR", name: "Argentina" },
+  { code: "CL", name: "Chile" },
+  { code: "CO", name: "Colômbia" },
+  { code: "MX", name: "México" },
+  { code: "PE", name: "Peru" },
+  { code: "UY", name: "Uruguai" },
+  { code: "PY", name: "Paraguai" },
+  { code: "BO", name: "Bolívia" },
+  { code: "EC", name: "Equador" },
+  { code: "VE", name: "Venezuela" },
+  { code: "US", name: "Estados Unidos" },
+  { code: "PT", name: "Portugal" },
+  { code: "ES", name: "Espanha" },
+  { code: "GB", name: "Reino Unido" },
+  { code: "DE", name: "Alemanha" },
+  { code: "FR", name: "França" },
+  { code: "IT", name: "Itália" },
+  { code: "CA", name: "Canadá" },
+  { code: "AU", name: "Austrália" },
+  { code: "JP", name: "Japão" },
+  { code: "CN", name: "China" },
+  { code: "IN", name: "Índia" },
+  { code: "ZA", name: "África do Sul" },
+  { code: "NG", name: "Nigéria" },
+  { code: "AO", name: "Angola" },
+  { code: "MZ", name: "Moçambique" },
+  { code: "OTHER", name: "Outro" },
+];
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("BR");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== "register") return;
+    fetch("https://ipapi.co/json/")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.country_code) {
+          const found = COUNTRIES.find((c) => c.code === data.country_code);
+          setCountry(found ? found.code : "OTHER");
+        }
+      })
+      .catch(() => {});
+  }, [mode]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +66,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       const res =
         mode === "login"
           ? await api.login(email, password)
-          : await api.register({ email, password, name });
+          : await api.register({ email, password, name, lastName, phone, country });
       if (!res.accessToken) throw new Error("Token não recebido");
       setToken(res.accessToken);
       navigate({ to: "/trade" });
@@ -50,16 +97,58 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
           <form onSubmit={submit} className="space-y-4">
             {mode === "register" && (
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Nome</label>
-                <input
-                  className="mt-1 w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Nome</label>
+                    <input
+                      className="mt-1 w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Sobrenome</label>
+                    <input
+                      className="mt-1 w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">País de residência</label>
+                  <select
+                    className="mt-1 w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    required
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Telefone / WhatsApp</label>
+                  <input
+                    type="tel"
+                    placeholder="+55 11 99999-9999"
+                    className="mt-1 w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                  />
+                </div>
+              </>
             )}
+
             <div>
               <label className="text-xs font-medium text-muted-foreground">E-mail</label>
               <input
@@ -70,6 +159,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                 required
               />
             </div>
+
             <div>
               <label className="text-xs font-medium text-muted-foreground">Senha</label>
               <input

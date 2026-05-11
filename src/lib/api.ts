@@ -44,7 +44,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
-  register: (payload: { email: string; password: string; name?: string }) =>
+  register: (payload: { email: string; password: string; name: string; lastName?: string; phone?: string; country?: string }) =>
     apiFetch<{ accessToken: string; user?: any }>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify(payload),
