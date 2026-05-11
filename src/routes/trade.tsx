@@ -178,7 +178,12 @@ function TradeRoom() {
               )}
             </div>
 
-            <TradePanel asset={selected} isDemo={isDemo} onTradePlaced={handleTradePlaced} />
+            <TradePanel
+                asset={selected}
+                isDemo={isDemo}
+                balance={isDemo ? (profile?.demoBalance ?? 0) : (profile?.balance ?? 0)}
+                onTradePlaced={handleTradePlaced}
+              />
 
             {/* Far-right decorative icon rail (PocketOption style) */}
             <aside className="w-14 shrink-0 bg-panel border-l border-border/60 flex flex-col items-center py-2 gap-1">

@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
-import { Clock, DollarSign, Minus, Plus, ArrowUp, ArrowDown } from "lucide-react";
+import { Clock, DollarSign, Minus, Plus, ArrowUp, ArrowDown, Percent, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
 import { brl } from "@/lib/format";
 import type { Asset } from "./asset-sidebar";
 
 const DURATIONS = [
+  { label: "5s",  value: 5 },
+  { label: "10s", value: 10 },
+  { label: "15s", value: 15 },
   { label: "30s", value: 30 },
-  { label: "1m", value: 60 },
-  { label: "2m", value: 120 },
-  { label: "5m", value: 300 },
+  { label: "45s", value: 45 },
+  { label: "1m",  value: 60 },
+  { label: "2m",  value: 120 },
+  { label: "3m",  value: 180 },
+  { label: "5m",  value: 300 },
 ];
 
 const QUICK_AMOUNTS = [5, 10, 25, 50, 100, 250];
@@ -16,16 +21,24 @@ const QUICK_AMOUNTS = [5, 10, 25, 50, 100, 250];
 export function TradePanel({
   asset,
   isDemo,
+  balance,
   onTradePlaced,
 }: {
   asset: Asset | null;
   isDemo: boolean;
+  balance: number;
   onTradePlaced: (trade: { id: string; assetSymbol: string; direction: "CALL" | "PUT"; amount: number; duration: number; expiresAt: number }) => void;
 }) {
   const [amount, setAmount] = useState<number>(10);
+  const [percent, setPercent] = useState<number>(10);
+  const [usePercent, setUsePercent] = useState(false);
   const [duration, setDuration] = useState<number>(60);
   const [submitting, setSubmitting] = useState<null | "CALL" | "PUT">(null);
   const [error, setError] = useState<string | null>(null);
+
+  const computedAmount = usePercent
+    ? Math.max(1, parseFloat(((balance * percent) / 100).toFixed(2)))
+    : amount;
 
   useEffect(() => {
     if (error) {
@@ -36,7 +49,7 @@ export function TradePanel({
 
   const place = async (direction: "CALL" | "PUT") => {
     if (!asset) return;
-    if (amount < 1) {
+    if (computedAmount < 1) {
       setError("Valor mínimo R$1");
       return;
     }
@@ -46,7 +59,7 @@ export function TradePanel({
       const res = await api.trade({
         assetId: asset.id,
         direction,
-        amount,
+        amount: computedAmount,
         duration,
         isDemo,
       });
@@ -54,7 +67,7 @@ export function TradePanel({
         id: res.id,
         assetSymbol: asset.symbol,
         direction,
-        amount,
+        amount: computedAmount,
         duration,
         expiresAt: res.expiresAt
           ? new Date(res.expiresAt).getTime()
@@ -68,7 +81,7 @@ export function TradePanel({
   };
 
   const payout = asset?.payout ?? 0;
-  const profit = amount * (payout / 100);
+  const profit = computedAmount * (payout / 100);
 
   return (
     <aside className="w-64 shrink-0 bg-panel border-l border-border/60 flex flex-col">
@@ -117,7 +130,7 @@ export function TradePanel({
                 : `00:${String(Math.floor(duration / 60)).padStart(2, "0")}:${String(duration % 60).padStart(2, "0")}`}
             </span>
           </div>
-          <div className="mt-2 grid grid-cols-4 gap-1.5">
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
             {DURATIONS.map((d) => (
               <button
                 key={d.value}
@@ -136,53 +149,60 @@ export function TradePanel({
 
         {/* Amount */}
         <div>
-          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em] flex items-center gap-1.5 mb-2">
-            <DollarSign className="w-3 h-3" /> Valor do investimento
-          </label>
-          <div className="flex items-stretch rounded-lg bg-input border border-border overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em] flex items-center gap-1.5">
+              {usePercent ? <><Percent className="w-3 h-3" /> % do saldo</> : <><DollarSign className="w-3 h-3" /> Valor do investimento</>}
+            </label>
             <button
-              onClick={() => setAmount((a) => Math.max(1, +(a - 1).toFixed(2)))}
-              className="px-4 hover:bg-accent transition flex items-center text-muted-foreground"
+              onClick={() => setUsePercent((v) => !v)}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground border border-border rounded px-1.5 py-0.5 bg-secondary hover:bg-accent transition"
             >
-              <Minus className="w-4 h-4" />
-            </button>
-            <input
-              type="number"
-              min={1}
-              step={1}
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className="flex-1 w-full bg-transparent border-x border-border px-2 py-2.5 text-center text-xl font-bold tabular-nums focus:outline-none"
-            />
-            <button
-              onClick={() => setAmount((a) => +(a + 1).toFixed(2))}
-              className="px-4 hover:bg-accent transition flex items-center text-muted-foreground"
-            >
-              <Plus className="w-4 h-4" />
+              <RefreshCw className="w-2.5 h-2.5" /> Trocar
             </button>
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-1.5">
-            {QUICK_AMOUNTS.map((v) => (
-              <button
-                key={v}
-                onClick={() => setAmount(v)}
-                className={`text-xs py-1.5 rounded-md font-semibold border transition ${
-                  amount === v
-                    ? "bg-accent border-call/50 text-foreground"
-                    : "bg-secondary/60 border-border text-muted-foreground hover:bg-accent hover:text-foreground"
-                }`}
-              >
-                R${v}
-              </button>
-            ))}
-          </div>
+          {usePercent ? (
+            <>
+              <div className="flex items-stretch rounded-lg bg-input border border-border overflow-hidden">
+                <button onClick={() => setPercent((p) => Math.max(1, p - 1))} className="px-4 hover:bg-accent transition flex items-center text-muted-foreground"><Minus className="w-4 h-4" /></button>
+                <div className="relative flex-1">
+                  <input
+                    type="number" min={1} max={100} step={1}
+                    value={percent}
+                    onChange={(e) => setPercent(Math.min(100, Math.max(1, Number(e.target.value))))}
+                    className="w-full bg-transparent border-x border-border px-2 py-2.5 text-center text-xl font-bold tabular-nums focus:outline-none pr-6"
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-bold">%</span>
+                </div>
+                <button onClick={() => setPercent((p) => Math.min(100, p + 1))} className="px-4 hover:bg-accent transition flex items-center text-muted-foreground"><Plus className="w-4 h-4" /></button>
+              </div>
+              <div className="mt-2 grid grid-cols-4 gap-1.5">
+                {[5, 10, 25, 50].map((v) => (
+                  <button key={v} onClick={() => setPercent(v)} className={`text-xs py-1.5 rounded-md font-semibold border transition ${percent === v ? "bg-accent border-call/50 text-foreground" : "bg-secondary/60 border-border text-muted-foreground hover:bg-accent hover:text-foreground"}`}>{v}%</button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5 text-center">≈ {brl(computedAmount)} de {brl(balance)}</p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-stretch rounded-lg bg-input border border-border overflow-hidden">
+                <button onClick={() => setAmount((a) => Math.max(1, +(a - 1).toFixed(2)))} className="px-4 hover:bg-accent transition flex items-center text-muted-foreground"><Minus className="w-4 h-4" /></button>
+                <input type="number" min={1} step={1} value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="flex-1 w-full bg-transparent border-x border-border px-2 py-2.5 text-center text-xl font-bold tabular-nums focus:outline-none" />
+                <button onClick={() => setAmount((a) => +(a + 1).toFixed(2))} className="px-4 hover:bg-accent transition flex items-center text-muted-foreground"><Plus className="w-4 h-4" /></button>
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-1.5">
+                {QUICK_AMOUNTS.map((v) => (
+                  <button key={v} onClick={() => setAmount(v)} className={`text-xs py-1.5 rounded-md font-semibold border transition ${amount === v ? "bg-accent border-call/50 text-foreground" : "bg-secondary/60 border-border text-muted-foreground hover:bg-accent hover:text-foreground"}`}>R${v}</button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Profit summary */}
         <div className="rounded-lg bg-gradient-to-br from-call/10 via-call/5 to-transparent border border-call/20 p-3 space-y-1.5">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Investimento</span>
-            <span className="font-semibold tabular-nums">{brl(amount)}</span>
+            <span className="font-semibold tabular-nums">{brl(computedAmount)}</span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Lucro estimado</span>
@@ -191,7 +211,7 @@ export function TradePanel({
           <div className="h-px bg-border my-1" />
           <div className="flex justify-between text-sm">
             <span className="font-semibold">Total se ganhar</span>
-            <span className="font-black text-call tabular-nums">{brl(amount + profit)}</span>
+            <span className="font-black text-call tabular-nums">{brl(computedAmount + profit)}</span>
           </div>
         </div>
 

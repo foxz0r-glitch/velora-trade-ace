@@ -15,6 +15,9 @@ import {
 
 export type Asset = { id: string; name: string; symbol: string; payout: number };
 
+const DEFAULT_SYMBOL = "EUR/USD";
+const STORAGE_KEY = "lastAssetSymbol";
+
 type CategoryId = "favorites" | "currencies" | "crypto" | "commodities" | "stocks" | "indices";
 
 const CATEGORIES: { id: CategoryId; label: string; icon: typeof DollarSign }[] = [
@@ -59,7 +62,17 @@ export function AssetSidebar({
   useEffect(() => {
     api
       .assets()
-      .then((d) => setAssets(Array.isArray(d) ? d : []))
+      .then((d) => {
+        const list = Array.isArray(d) ? d : [];
+        setAssets(list);
+        if (list.length === 0) return;
+        const savedSymbol = localStorage.getItem(STORAGE_KEY);
+        const target =
+          list.find((a) => a.symbol === savedSymbol) ??
+          list.find((a) => a.symbol === DEFAULT_SYMBOL) ??
+          list[0];
+        onSelect(target);
+      })
       .catch(() => setError("Falha ao carregar"))
       .finally(() => setLoading(false));
   }, []);
@@ -201,6 +214,7 @@ export function AssetSidebar({
                     <button
                       key={a.id}
                       onClick={() => {
+                        localStorage.setItem(STORAGE_KEY, a.symbol);
                         onSelect(a);
                         setOpen(false);
                       }}

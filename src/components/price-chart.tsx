@@ -33,6 +33,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
       layout: {
         background: { color: "transparent" },
         textColor: "#2A3144",
+        attributionLogo: false,
       },
       grid: {
         vertLines: { color: "#23283B" },
