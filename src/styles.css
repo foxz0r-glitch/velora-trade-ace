@@ -38,39 +38,62 @@
 
 :root {
   --radius: 0.625rem;
-  /* Custom palette — slate blue-violet, harmonized */
+  /* Velora base palette */
   --background: #1C202E;
-  --foreground: oklch(0.96 0.005 265);
+  --foreground: #F4F7FA;
   --card: #23283B;
-  --card-foreground: oklch(0.96 0.005 265);
+  --card-foreground: #F4F7FA;
   --popover: #1F2334;
-  --popover-foreground: oklch(0.96 0.005 265);
+  --popover-foreground: #F4F7FA;
   --panel: #1E2131;
-  --panel-foreground: oklch(0.96 0.005 265);
-  --primary: #32AC41;
-  --primary-foreground: #0E1A11;
+  --panel-foreground: #F4F7FA;
+  --primary: #2A3144;
+  --primary-foreground: #F4F7FA;
   --secondary: #242839;
-  --secondary-foreground: oklch(0.96 0.005 265);
+  --secondary-foreground: #F4F7FA;
   --muted: #222636;
-  --muted-foreground: oklch(0.66 0.020 250);
+  --muted-foreground: #8E98B3;
   --accent: #2A3144;
-  --accent-foreground: oklch(0.96 0.005 265);
-  --destructive: #F3382C;
+  --accent-foreground: #F4F7FA;
+  --destructive: #FF3E1F;
   --destructive-foreground: #FFFFFF;
   --border: #2A3144;
   --input: #242839;
-  --ring: #32AC41;
+  --ring: #2A3144;
 
   /* CALL/PUT */
-  --call: #32AC41;
-  --call-foreground: #0E1A11;
-  --put: #F3382C;
+  --call: #45B734;
+  --call-foreground: #FFFFFF;
+  --put: #FF3E1F;
   --put-foreground: #FFFFFF;
 }
 
 .dark {
-  --background: oklch(0.18 0.01 250);
-  --foreground: oklch(0.96 0.005 250);
+  --background: #1C202E;
+  --foreground: #F4F7FA;
+  --card: #23283B;
+  --card-foreground: #F4F7FA;
+  --popover: #1F2334;
+  --popover-foreground: #F4F7FA;
+  --panel: #1E2131;
+  --panel-foreground: #F4F7FA;
+  --primary: #2A3144;
+  --primary-foreground: #F4F7FA;
+  --secondary: #242839;
+  --secondary-foreground: #F4F7FA;
+  --muted: #222636;
+  --muted-foreground: #8E98B3;
+  --accent: #2A3144;
+  --accent-foreground: #F4F7FA;
+  --destructive: #FF3E1F;
+  --destructive-foreground: #FFFFFF;
+  --border: #2A3144;
+  --input: #242839;
+  --ring: #2A3144;
+  --call: #45B734;
+  --call-foreground: #FFFFFF;
+  --put: #FF3E1F;
+  --put-foreground: #FFFFFF;
 }
 
 @layer base {
