@@ -1,6 +1,8 @@
 import { brl } from "@/lib/format";
 import { LogOut, Gift, ChevronDown, Plus } from "lucide-react";
+import { useState } from "react";
 import type { Profile } from "@/hooks/use-profile";
+import { DepositModal } from "@/components/deposit-modal";
 
 interface TopBarProps {
   profile: Profile | null;
