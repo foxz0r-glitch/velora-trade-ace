@@ -9,7 +9,13 @@ import {
 import { getSocket } from "@/lib/socket";
 import { api } from "@/lib/api";
 
-type ServerCandle = { time: number; open: number; high: number; low: number; close: number };
+type Candle = {
+  time: UTCTimestamp;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+};
 
 const TIMEFRAMES = [
   { label: "5s",   value: 5 },
@@ -31,6 +37,11 @@ export function PriceChart({ symbol }: { symbol: string }) {
   const chartRef     = useRef<IChartApi | null>(null);
   const seriesRef    = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const tfRef        = useRef<number>(60);
+
+  // Candle atual em construção (cliente faz a única agregação que sobrou:
+  // pegar o tick e atualizar close/high/low do bucket vigente).
+  const currentRef = useRef<Candle | null>(null);
+
   const [timeframe, setTimeframe] = useState(60);
 
   // Chart setup — roda uma vez
@@ -74,28 +85,30 @@ export function PriceChart({ symbol }: { symbol: string }) {
     };
   }, []);
 
-  // Carrega histórico ao mudar símbolo ou timeframe
+  // Carrega histórico ao mudar símbolo ou timeframe — vem direto da CasaTrade
   useEffect(() => {
     tfRef.current = timeframe;
+    currentRef.current = null;
     if (!seriesRef.current) return;
 
     api.candles(symbol, timeframe).then((data) => {
       if (!seriesRef.current || !data.length) return;
-      seriesRef.current.setData(
-        data.map((d) => ({
-          time:  d.time as UTCTimestamp,
-          open:  d.open,
-          high:  d.high,
-          low:   d.low,
-          close: d.close,
-        }))
-      );
+      const candles: Candle[] = data.map((d) => ({
+        time:  d.time as UTCTimestamp,
+        open:  d.open,
+        high:  d.high,
+        low:   d.low,
+        close: d.close,
+      }));
+      seriesRef.current.setData(candles);
+      // O último candle do histórico vira o "atual" — próximos ticks atualizam ele
+      currentRef.current = candles[candles.length - 1];
       chartRef.current?.timeScale().scrollToRealTime();
     });
   }, [symbol, timeframe]);
 
-  // Polling de resiliência — re-sincroniza últimos 5 candles a cada 5s,
-  // incluindo candles fechados (historicalUpdate=true)
+  // Polling de resiliência — recarrega últimos candles da CasaTrade a cada 5s
+  // para corrigir qualquer drift do candle local
   useEffect(() => {
     const sync = async () => {
       if (!seriesRef.current) return;
@@ -115,55 +128,66 @@ export function PriceChart({ symbol }: { symbol: string }) {
           );
         } catch {}
       }
+      // Atualiza o candle atual de referência
+      const last = data[data.length - 1];
+      const nowSec = Math.floor(Date.now() / 1000);
+      const currentBucket = nowSec - (nowSec % timeframe);
+      if (last.time === currentBucket) {
+        currentRef.current = {
+          time:  last.time as UTCTimestamp,
+          open:  last.open,
+          high:  last.high,
+          low:   last.low,
+          close: last.close,
+        };
+      }
     };
     const interval = setInterval(sync, 5000);
     return () => clearInterval(interval);
   }, [symbol, timeframe]);
 
-  // Feed de preços em tempo real — aplica o que o servidor manda, DIRETO,
-  // sem lerp, sem animação, sem reset. Tick a tick, igual CasaTrade plota.
+  // Feed de ticks em tempo real — apenas `{symbol, price, timestamp}` chega do servidor.
+  // Cliente determina o bucket e atualiza close/high/low. Quando o bucket muda,
+  // abre um novo candle automaticamente.
   useEffect(() => {
     const socket = getSocket();
 
-    const applyCandle = (candles: Record<number, ServerCandle>) => {
-      const candle = candles[tfRef.current];
-      if (!candle || !seriesRef.current) return;
-      try {
-        seriesRef.current.update({
-          time:  candle.time as UTCTimestamp,
-          open:  candle.open,
-          high:  candle.high,
-          low:   candle.low,
-          close: candle.close,
-        });
-      } catch {}
-    };
+    const onTick = (msg: { symbol: string; price: number; timestamp: number }) => {
+      if (!msg || msg.symbol !== symbol || !seriesRef.current) return;
 
-    const onUpdate = (msg: {
-      symbol: string;
-      price: number;
-      timestamp?: number;
-      candles?: Record<number, ServerCandle>;
-    }) => {
-      if (!msg || msg.symbol !== symbol) return;
-      if (msg.candles) applyCandle(msg.candles);
-    };
+      const tf      = tfRef.current;
+      const tsSec   = Math.floor(msg.timestamp / 1000);
+      const bucket  = tsSec - (tsSec % tf);
+      const current = currentRef.current;
 
-    const onSnapshot = (msg: { symbol: string; candles: Record<number, ServerCandle> }) => {
-      if (!msg || msg.symbol !== symbol) return;
-      if (msg.candles) applyCandle(msg.candles);
+      if (!current || current.time !== bucket) {
+        // Novo bucket — abre candle com open=high=low=close=price
+        const fresh: Candle = {
+          time:  bucket as UTCTimestamp,
+          open:  msg.price,
+          high:  msg.price,
+          low:   msg.price,
+          close: msg.price,
+        };
+        currentRef.current = fresh;
+        try { seriesRef.current.update(fresh); } catch {}
+      } else {
+        // Mesmo bucket — atualiza high/low/close
+        current.close = msg.price;
+        if (msg.price > current.high) current.high = msg.price;
+        if (msg.price < current.low)  current.low  = msg.price;
+        try { seriesRef.current.update(current); } catch {}
+      }
     };
 
     const subscribe = () => socket.emit("subscribe:asset", symbol);
     subscribe();
-    socket.on("connect",         subscribe);
-    socket.on("price_update",    onUpdate);
-    socket.on("candle_snapshot", onSnapshot);
+    socket.on("connect",      subscribe);
+    socket.on("price_update", onTick);
 
     return () => {
-      socket.off("connect",         subscribe);
-      socket.off("price_update",    onUpdate);
-      socket.off("candle_snapshot", onSnapshot);
+      socket.off("connect",      subscribe);
+      socket.off("price_update", onTick);
       socket.emit("unsubscribe:asset", symbol);
     };
   }, [symbol]);
