@@ -186,10 +186,14 @@ export function PriceChart({ symbol }: { symbol: string }) {
 
         if (existing) {
           // ─── TRANSIÇÃO DE BUCKET ──────────────────────────────────────────
-          // Quando o servidor anuncia um novo bucket:
+          // Quando o servidor anuncia um novo bucket (transição REAL, não a
+          // primeira vez que vemos um bucket no load inicial):
           // 1. Finaliza o bucket ANTERIOR com seus valores REAIS (do servidor),
           //    sobrescrevendo qualquer estado lerpado/parcial.
           // 2. Reseta os anim refs para o OPEN do novo bucket (que vira ponto único).
+          //
+          // No load inicial (lastBucketRef === -1), NÃO reseta: mantém os anim
+          // refs que foram inicializados com o estado atual via REST/snapshot.
           if (bucket !== lastBucketRef.current) {
             if (lastBucketRef.current !== -1) {
               const oldCandle = candlesRef.current.get(lastBucketRef.current);
@@ -202,11 +206,12 @@ export function PriceChart({ symbol }: { symbol: string }) {
                   close: oldCandle.close,
                 }); } catch {}
               }
+              // Reset apenas em transição real
+              animCloseRef.current = existing.open;
+              animHighRef.current  = existing.open;
+              animLowRef.current   = existing.open;
             }
             lastBucketRef.current = bucket;
-            animCloseRef.current  = existing.open;
-            animHighRef.current   = existing.open;
-            animLowRef.current    = existing.open;
           }
 
           // Inicializa se ainda null (deveria ter sido inicializado antes, defensivo)
