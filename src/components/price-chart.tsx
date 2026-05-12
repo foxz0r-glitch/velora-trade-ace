@@ -42,7 +42,6 @@ export function PriceChart({ symbol }: { symbol: string }) {
   const tfRef        = useRef<number>(60);
 
   // Lerp sincronizado: close + high + low animam JUNTOS em direção aos valores raw do servidor
-  // Após ~1s de lerp convergente, display = CasaTrade exato
   const targetCloseRef = useRef<number | null>(null);
   const targetHighRef  = useRef<number | null>(null);
   const targetLowRef   = useRef<number | null>(null);
@@ -51,8 +50,11 @@ export function PriceChart({ symbol }: { symbol: string }) {
   const animHighRef  = useRef<number | null>(null);
   const animLowRef   = useRef<number | null>(null);
 
-  const lastBucketRef = useRef<number>(-1);
-  const rafRef        = useRef<number>(0);
+  // Tempo do bucket atual VINDO DO SERVIDOR — fonte autoritativa para detectar
+  // transição de bucket. Não dá pra usar Date.now() do cliente (skew de relógio).
+  const serverBucketRef = useRef<number>(-1);
+  const lastBucketRef   = useRef<number>(-1);
+  const rafRef          = useRef<number>(0);
   const [timeframe, setTimeframe] = useState(60);
 
   // Chart setup — roda uma vez
@@ -99,14 +101,15 @@ export function PriceChart({ symbol }: { symbol: string }) {
 
   // Carrega histórico quando símbolo ou timeframe muda
   useEffect(() => {
-    tfRef.current        = timeframe;
+    tfRef.current          = timeframe;
     targetCloseRef.current = null;
     targetHighRef.current  = null;
     targetLowRef.current   = null;
     animCloseRef.current   = null;
     animHighRef.current    = null;
     animLowRef.current     = null;
-    lastBucketRef.current  = -1;
+    serverBucketRef.current = -1;
+    lastBucketRef.current   = -1;
     if (!seriesRef.current) return;
     candlesRef.current.clear();
 
@@ -122,31 +125,41 @@ export function PriceChart({ symbol }: { symbol: string }) {
       candles.forEach((c) => candlesRef.current.set(Number(c.time), c));
       seriesRef.current.setData(candles);
       const last = candles[candles.length - 1];
-      targetCloseRef.current = last.close;
-      targetHighRef.current  = last.high;
-      targetLowRef.current   = last.low;
-      animCloseRef.current   = last.close;
-      animHighRef.current    = last.high;
-      animLowRef.current     = last.low;
+      // Inicializa estado a partir do último candle do histórico
+      serverBucketRef.current = Number(last.time);
+      targetCloseRef.current  = last.close;
+      targetHighRef.current   = last.high;
+      targetLowRef.current    = last.low;
+      animCloseRef.current    = last.close;
+      animHighRef.current     = last.high;
+      animLowRef.current      = last.low;
       chartRef.current?.timeScale().scrollToRealTime();
     });
   }, [symbol, timeframe]);
 
   // Polling de resiliência — sincroniza últimos 3 candles via REST a cada 5s
+  // NÃO sobrescreve o candle atual (em formação), apenas os fechados
   useEffect(() => {
     const sync = async () => {
       if (!seriesRef.current) return;
       const data = await api.candles(symbol, timeframe, 3);
       if (!data.length) return;
+      const currentServerBucket = serverBucketRef.current;
       for (const d of data) {
-        const existing = candlesRef.current.get(d.time);
+        // Só atualiza candles fechados (anteriores ao bucket atual)
+        if (currentServerBucket !== -1 && d.time >= currentServerBucket) continue;
         candlesRef.current.set(d.time, {
           time:  d.time as UTCTimestamp,
           open:  d.open,
-          high:  existing?.high ?? d.high,
-          low:   existing?.low  ?? d.low,
-          close: existing?.close ?? d.close,
+          high:  d.high,
+          low:   d.low,
+          close: d.close,
         });
+        // Aplica direto na série para corrigir qualquer divergência em candles fechados
+        try { seriesRef.current.update({
+          time: d.time as UTCTimestamp,
+          open: d.open, high: d.high, low: d.low, close: d.close,
+        }); } catch {}
       }
     };
     const interval = setInterval(sync, 5000);
@@ -157,55 +170,71 @@ export function PriceChart({ symbol }: { symbol: string }) {
   useEffect(() => {
     const socket = getSocket();
 
-    // rAF: lerp sincronizado em close + high + low
-    // Todos a 0.05/frame em direção aos valores RAW do servidor
-    // Após ~1s sem mudança de target, display converge para CasaTrade exato
+    // rAF: lerp sincronizado em close + high + low a 60fps.
+    // Detecção de mudança de bucket usa o tempo VINDO DO SERVIDOR (serverBucketRef),
+    // não Date.now() do cliente. Isso evita skew de relógio + garante que
+    // o reset para o open só acontece quando o servidor confirma o novo bucket.
     const loop = () => {
       const tgtClose = targetCloseRef.current;
       const tgtHigh  = targetHighRef.current;
       const tgtLow   = targetLowRef.current;
+      const bucket   = serverBucketRef.current;
 
-      if (tgtClose !== null && seriesRef.current) {
-        if (animCloseRef.current === null) animCloseRef.current = tgtClose;
-        if (animHighRef.current  === null) animHighRef.current  = tgtHigh  ?? tgtClose;
-        if (animLowRef.current   === null) animLowRef.current   = tgtLow   ?? tgtClose;
-
-        // Lerp do close (bidirecional)
-        const curClose  = animCloseRef.current;
-        const diffClose = tgtClose - curClose;
-        const nextClose = Math.abs(diffClose) < 0.0000001 ? tgtClose : curClose + diffClose * 0.05;
-        animCloseRef.current = nextClose;
-
-        // Lerp do high (só cresce — high real só pode aumentar dentro do bucket)
-        const curHigh = animHighRef.current;
-        const tH = tgtHigh ?? tgtClose;
-        if (tH > curHigh) {
-          const diffHigh = tH - curHigh;
-          animHighRef.current = diffHigh < 0.0000001 ? tH : curHigh + diffHigh * 0.05;
-        }
-
-        // Lerp do low (só decresce — low real só pode diminuir dentro do bucket)
-        const curLow = animLowRef.current;
-        const tL = tgtLow ?? tgtClose;
-        if (tL < curLow) {
-          const diffLow = tL - curLow;
-          animLowRef.current = Math.abs(diffLow) < 0.0000001 ? tL : curLow + diffLow * 0.05;
-        }
-
-        // Detecta mudança de bucket — reseta refs locais para o open do novo bucket
-        const tf      = tfRef.current;
-        const nowSec  = Math.floor(Date.now() / 1000);
-        const bucket  = nowSec - (nowSec % tf);
+      if (tgtClose !== null && bucket !== -1 && seriesRef.current) {
         const existing = candlesRef.current.get(bucket);
 
         if (existing) {
+          // ─── TRANSIÇÃO DE BUCKET ──────────────────────────────────────────
+          // Quando o servidor anuncia um novo bucket:
+          // 1. Finaliza o bucket ANTERIOR com seus valores REAIS (do servidor),
+          //    sobrescrevendo qualquer estado lerpado/parcial.
+          // 2. Reseta os anim refs para o OPEN do novo bucket (que vira ponto único).
           if (bucket !== lastBucketRef.current) {
+            if (lastBucketRef.current !== -1) {
+              const oldCandle = candlesRef.current.get(lastBucketRef.current);
+              if (oldCandle) {
+                try { seriesRef.current.update({
+                  time:  oldCandle.time,
+                  open:  oldCandle.open,
+                  high:  oldCandle.high,
+                  low:   oldCandle.low,
+                  close: oldCandle.close,
+                }); } catch {}
+              }
+            }
             lastBucketRef.current = bucket;
             animCloseRef.current  = existing.open;
             animHighRef.current   = existing.open;
             animLowRef.current    = existing.open;
           }
 
+          // Inicializa se ainda null (deveria ter sido inicializado antes, defensivo)
+          if (animCloseRef.current === null) animCloseRef.current = existing.open;
+          if (animHighRef.current  === null) animHighRef.current  = existing.open;
+          if (animLowRef.current   === null) animLowRef.current   = existing.open;
+
+          // Lerp do close (bidirecional, 0.05/frame ≈ 1s para 95%)
+          const curClose  = animCloseRef.current;
+          const diffClose = tgtClose - curClose;
+          animCloseRef.current = Math.abs(diffClose) < 0.0000001 ? tgtClose : curClose + diffClose * 0.05;
+
+          // Lerp do high — só cresce (high real só pode aumentar dentro do bucket)
+          const curHigh = animHighRef.current;
+          const tH = tgtHigh ?? tgtClose;
+          if (tH > curHigh) {
+            const diffHigh = tH - curHigh;
+            animHighRef.current = diffHigh < 0.0000001 ? tH : curHigh + diffHigh * 0.05;
+          }
+
+          // Lerp do low — só decresce
+          const curLow = animLowRef.current;
+          const tL = tgtLow ?? tgtClose;
+          if (tL < curLow) {
+            const diffLow = tL - curLow;
+            animLowRef.current = Math.abs(diffLow) < 0.0000001 ? tL : curLow + diffLow * 0.05;
+          }
+
+          // Render do bucket atual com valores lerpados
           const c: Candle = {
             time:  bucket as UTCTimestamp,
             open:  existing.open,
@@ -224,7 +253,8 @@ export function PriceChart({ symbol }: { symbol: string }) {
       const tf     = tfRef.current;
       const candle = candles[tf];
       if (!candle) return;
-      // Servidor é a verdade — atualiza candlesRef e targets de lerp
+
+      // Atualiza candlesRef com valores RAW do servidor
       candlesRef.current.set(candle.time, {
         time:  candle.time as UTCTimestamp,
         open:  candle.open,
@@ -232,6 +262,12 @@ export function PriceChart({ symbol }: { symbol: string }) {
         low:   candle.low,
         close: candle.close,
       });
+
+      // Tempo do bucket atual = informado pelo servidor (não inferido pelo relógio do cliente)
+      if (candle.time >= serverBucketRef.current) {
+        serverBucketRef.current = candle.time;
+      }
+
       targetCloseRef.current = candle.close;
       targetHighRef.current  = candle.high;
       targetLowRef.current   = candle.low;
@@ -261,11 +297,14 @@ export function PriceChart({ symbol }: { symbol: string }) {
         close: candle.close,
       });
 
+      if (candle.time >= serverBucketRef.current) {
+        serverBucketRef.current = candle.time;
+      }
+
       targetCloseRef.current = candle.close;
       targetHighRef.current  = candle.high;
       targetLowRef.current   = candle.low;
 
-      // Inicializa anim refs se ainda não foram (primeira conexão)
       if (animCloseRef.current === null) animCloseRef.current = candle.close;
       if (animHighRef.current  === null) animHighRef.current  = candle.high;
       if (animLowRef.current   === null) animLowRef.current   = candle.low;
