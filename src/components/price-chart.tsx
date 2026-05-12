@@ -156,10 +156,11 @@ export function PriceChart({ symbol }: { symbol: string }) {
           close: d.close,
         });
         // Aplica direto na série para corrigir qualquer divergência em candles fechados
+        // (historicalUpdate=true permite atualizar barras já-fechadas, v5+)
         try { seriesRef.current.update({
           time: d.time as UTCTimestamp,
           open: d.open, high: d.high, low: d.low, close: d.close,
-        }); } catch {}
+        }, true); } catch {}
       }
     };
     const interval = setInterval(sync, 5000);
