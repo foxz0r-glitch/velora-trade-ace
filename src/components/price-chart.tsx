@@ -39,15 +39,15 @@ export function PriceChart({ symbol }: { symbol: string }) {
   const chartRef     = useRef<IChartApi | null>(null);
   const seriesRef    = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const candlesRef   = useRef<Map<number, Candle>>(new Map());
-  const lastPriceRef = useRef<number | null>(null);
   const tfRef        = useRef<number>(60);
 
-  // Animação do close (lerp local, 60fps)
+  // Lerp sincronizado: close + high + low animam JUNTOS em direção aos valores raw do servidor
+  // Após ~1s de lerp convergente, display = CasaTrade exato
   const targetCloseRef = useRef<number | null>(null);
-  const animCloseRef   = useRef<number | null>(null);
+  const targetHighRef  = useRef<number | null>(null);
+  const targetLowRef   = useRef<number | null>(null);
 
-  // Wick rastreado LOCALMENTE — o corpo nunca fica abaixo/acima do wick
-  // Sincronizado com o servidor apenas no momento de conexão (candle_snapshot)
+  const animCloseRef = useRef<number | null>(null);
   const animHighRef  = useRef<number | null>(null);
   const animLowRef   = useRef<number | null>(null);
 
@@ -55,7 +55,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
   const rafRef        = useRef<number>(0);
   const [timeframe, setTimeframe] = useState(60);
 
-  // Chart setup — runs once
+  // Chart setup — roda uma vez
   useEffect(() => {
     if (!containerRef.current) return;
     const chart = createChart(containerRef.current, {
@@ -101,16 +101,17 @@ export function PriceChart({ symbol }: { symbol: string }) {
   useEffect(() => {
     tfRef.current        = timeframe;
     targetCloseRef.current = null;
+    targetHighRef.current  = null;
+    targetLowRef.current   = null;
     animCloseRef.current   = null;
     animHighRef.current    = null;
     animLowRef.current     = null;
     lastBucketRef.current  = -1;
     if (!seriesRef.current) return;
     candlesRef.current.clear();
-    lastPriceRef.current = null;
 
     api.candles(symbol, timeframe).then((data) => {
-      if (!seriesRef.current) return;
+      if (!seriesRef.current || !data.length) return;
       const candles: Candle[] = data.map((d) => ({
         time:  d.time as UTCTimestamp,
         open:  d.open,
@@ -118,92 +119,99 @@ export function PriceChart({ symbol }: { symbol: string }) {
         low:   d.low,
         close: d.close,
       }));
-      if (candles.length > 0) {
-        candles.forEach((c) => candlesRef.current.set(Number(c.time), c));
-        seriesRef.current.setData(candles);
-        const last = candles[candles.length - 1].close;
-        lastPriceRef.current   = last;
-        targetCloseRef.current = last;
-        animCloseRef.current   = last;
-        chartRef.current?.timeScale().scrollToRealTime();
-      }
+      candles.forEach((c) => candlesRef.current.set(Number(c.time), c));
+      seriesRef.current.setData(candles);
+      const last = candles[candles.length - 1];
+      targetCloseRef.current = last.close;
+      targetHighRef.current  = last.high;
+      targetLowRef.current   = last.low;
+      animCloseRef.current   = last.close;
+      animHighRef.current    = last.high;
+      animLowRef.current     = last.low;
+      chartRef.current?.timeScale().scrollToRealTime();
     });
   }, [symbol, timeframe]);
 
-  // Polling de resiliência — mantém candlesRef atualizado se socket cair
+  // Polling de resiliência — sincroniza últimos 3 candles via REST a cada 5s
   useEffect(() => {
     const sync = async () => {
       if (!seriesRef.current) return;
       const data = await api.candles(symbol, timeframe, 3);
       if (!data.length) return;
-      const nowSec = Math.floor(Date.now() / 1000);
-      const currentBucket = nowSec - (nowSec % timeframe);
       for (const d of data) {
-        if (d.time >= currentBucket) {
-          // Atualiza só o open do candle atual (para o rAF usar o open correto)
-          const existing = candlesRef.current.get(d.time);
-          candlesRef.current.set(d.time, {
-            time:  d.time as UTCTimestamp,
-            open:  d.open,
-            high:  existing?.high  ?? d.high,
-            low:   existing?.low   ?? d.low,
-            close: d.close,
-          });
-        }
-      }
-      // Só atualiza target se socket não está ativo (resiliência)
-      if (!lastPriceRef.current) {
-        const last = data[data.length - 1];
-        targetCloseRef.current = last.close;
-        lastPriceRef.current   = last.close;
+        const existing = candlesRef.current.get(d.time);
+        candlesRef.current.set(d.time, {
+          time:  d.time as UTCTimestamp,
+          open:  d.open,
+          high:  existing?.high ?? d.high,
+          low:   existing?.low  ?? d.low,
+          close: existing?.close ?? d.close,
+        });
       }
     };
-    const interval = setInterval(sync, 3000);
+    const interval = setInterval(sync, 5000);
     return () => clearInterval(interval);
   }, [symbol, timeframe]);
 
-  // Loop de animação + feed de preços em tempo real
+  // Loop de animação + feed em tempo real
   useEffect(() => {
     const socket = getSocket();
-    let lastRealTickAt = 0;
 
-    // rAF: interpola o close em direção ao alvo a 60fps.
-    // animHigh/animLow rastreados LOCALMENTE — corpo sempre alcança o wick antes de ele crescer.
+    // rAF: lerp sincronizado em close + high + low
+    // Todos a 0.05/frame em direção aos valores RAW do servidor
+    // Após ~1s sem mudança de target, display converge para CasaTrade exato
     const loop = () => {
-      const target = targetCloseRef.current;
-      if (target !== null && seriesRef.current) {
-        if (animCloseRef.current === null) animCloseRef.current = target;
-        const cur  = animCloseRef.current;
-        const diff = target - cur;
-        const next = Math.abs(diff) < 0.0000001 ? target : cur + diff * 0.05;
-        animCloseRef.current = next;
+      const tgtClose = targetCloseRef.current;
+      const tgtHigh  = targetHighRef.current;
+      const tgtLow   = targetLowRef.current;
 
+      if (tgtClose !== null && seriesRef.current) {
+        if (animCloseRef.current === null) animCloseRef.current = tgtClose;
+        if (animHighRef.current  === null) animHighRef.current  = tgtHigh  ?? tgtClose;
+        if (animLowRef.current   === null) animLowRef.current   = tgtLow   ?? tgtClose;
+
+        // Lerp do close (bidirecional)
+        const curClose  = animCloseRef.current;
+        const diffClose = tgtClose - curClose;
+        const nextClose = Math.abs(diffClose) < 0.0000001 ? tgtClose : curClose + diffClose * 0.05;
+        animCloseRef.current = nextClose;
+
+        // Lerp do high (só cresce — high real só pode aumentar dentro do bucket)
+        const curHigh = animHighRef.current;
+        const tH = tgtHigh ?? tgtClose;
+        if (tH > curHigh) {
+          const diffHigh = tH - curHigh;
+          animHighRef.current = diffHigh < 0.0000001 ? tH : curHigh + diffHigh * 0.05;
+        }
+
+        // Lerp do low (só decresce — low real só pode diminuir dentro do bucket)
+        const curLow = animLowRef.current;
+        const tL = tgtLow ?? tgtClose;
+        if (tL < curLow) {
+          const diffLow = tL - curLow;
+          animLowRef.current = Math.abs(diffLow) < 0.0000001 ? tL : curLow + diffLow * 0.05;
+        }
+
+        // Detecta mudança de bucket — reseta refs locais para o open do novo bucket
         const tf      = tfRef.current;
         const nowSec  = Math.floor(Date.now() / 1000);
         const bucket  = nowSec - (nowSec % tf);
         const existing = candlesRef.current.get(bucket);
 
         if (existing) {
-          // Novo bucket: reseta o wick local para o open (mesmo open do servidor)
           if (bucket !== lastBucketRef.current) {
-            lastBucketRef.current  = bucket;
-            animCloseRef.current   = existing.open;
-            animHighRef.current    = existing.open;
-            animLowRef.current     = existing.open;
+            lastBucketRef.current = bucket;
+            animCloseRef.current  = existing.open;
+            animHighRef.current   = existing.open;
+            animLowRef.current    = existing.open;
           }
-
-          // Wick local: só cresce onde o corpo animado chegou — sem race condition
-          if (animHighRef.current === null) animHighRef.current = next;
-          if (animLowRef.current  === null) animLowRef.current  = next;
-          animHighRef.current = Math.max(animHighRef.current, next);
-          animLowRef.current  = Math.min(animLowRef.current,  next);
 
           const c: Candle = {
             time:  bucket as UTCTimestamp,
             open:  existing.open,
-            high:  animHighRef.current,
-            low:   animLowRef.current,
-            close: next,
+            high:  animHighRef.current!,
+            low:   animLowRef.current!,
+            close: animCloseRef.current!,
           };
           try { seriesRef.current.update(c); } catch {}
         }
@@ -212,20 +220,21 @@ export function PriceChart({ symbol }: { symbol: string }) {
     };
     rafRef.current = requestAnimationFrame(loop);
 
-    // Aplica candle do servidor no timeframe atual (para manter open correto em candlesRef)
     const applyServerCandle = (candles: Record<number, ServerCandle>) => {
       const tf     = tfRef.current;
       const candle = candles[tf];
       if (!candle) return;
-      // Preserva high/low local; só atualiza open e close (fontes do servidor)
-      const existing = candlesRef.current.get(candle.time);
+      // Servidor é a verdade — atualiza candlesRef e targets de lerp
       candlesRef.current.set(candle.time, {
         time:  candle.time as UTCTimestamp,
         open:  candle.open,
-        high:  existing?.high ?? candle.high,
-        low:   existing?.low  ?? candle.low,
+        high:  candle.high,
+        low:   candle.low,
         close: candle.close,
       });
+      targetCloseRef.current = candle.close;
+      targetHighRef.current  = candle.high;
+      targetLowRef.current   = candle.low;
     };
 
     const onUpdate = (msg: {
@@ -235,14 +244,9 @@ export function PriceChart({ symbol }: { symbol: string }) {
       candles?: Record<number, ServerCandle>;
     }) => {
       if (!msg || msg.symbol !== symbol) return;
-      lastRealTickAt = Date.now();
       if (msg.candles) applyServerCandle(msg.candles);
-      targetCloseRef.current = msg.price;
-      lastPriceRef.current   = msg.price;
     };
 
-    // Snapshot ao conectar: sincroniza posição inicial do wick com o servidor
-    // (todos os clientes começam do mesmo ponto — divergência posterior é < 1 frame)
     const onSnapshot = (msg: { symbol: string; candles: Record<number, ServerCandle> }) => {
       if (!msg || msg.symbol !== symbol) return;
       const tf     = tfRef.current;
@@ -257,36 +261,26 @@ export function PriceChart({ symbol }: { symbol: string }) {
         close: candle.close,
       });
 
-      // Inicializa animação a partir do estado atual do servidor
       targetCloseRef.current = candle.close;
-      lastPriceRef.current   = candle.close;
-      if (animCloseRef.current === null) animCloseRef.current = candle.close;
+      targetHighRef.current  = candle.high;
+      targetLowRef.current   = candle.low;
 
-      // Ponto de partida do wick local = wick atual do servidor
-      // (todos os clientes recebem o mesmo snapshot → mesmo ponto inicial)
-      if (animHighRef.current === null) animHighRef.current = candle.high;
-      if (animLowRef.current  === null) animLowRef.current  = candle.low;
+      // Inicializa anim refs se ainda não foram (primeira conexão)
+      if (animCloseRef.current === null) animCloseRef.current = candle.close;
+      if (animHighRef.current  === null) animHighRef.current  = candle.high;
+      if (animLowRef.current   === null) animLowRef.current   = candle.low;
     };
 
     const subscribe = () => socket.emit("subscribe:asset", symbol);
     subscribe();
-    socket.on("connect",        subscribe);
-    socket.on("price_update",   onUpdate);
+    socket.on("connect",         subscribe);
+    socket.on("price_update",    onUpdate);
     socket.on("candle_snapshot", onSnapshot);
-
-    // Drift suave: mantém a animação viva quando não há tick real por mais de 3s
-    const driftInterval = setInterval(() => {
-      if (Date.now() - lastRealTickAt < 3000) return;
-      const last = lastPriceRef.current;
-      if (!last) return;
-      targetCloseRef.current = last + (Math.random() - 0.5) * 0.0002 * last;
-    }, 1000);
 
     return () => {
       cancelAnimationFrame(rafRef.current);
-      clearInterval(driftInterval);
-      socket.off("connect",        subscribe);
-      socket.off("price_update",   onUpdate);
+      socket.off("connect",         subscribe);
+      socket.off("price_update",    onUpdate);
       socket.off("candle_snapshot", onSnapshot);
       socket.emit("unsubscribe:asset", symbol);
     };
